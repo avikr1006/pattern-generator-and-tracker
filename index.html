@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pattern Trial Tracker</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#111827;background:#f3f4f6}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:linear-gradient(135deg,#f8fafc,#e5e7eb);padding:20px}
+.wrap{max-width:760px;margin:auto}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:20px;box-shadow:0 10px 30px #00000010;margin-bottom:16px}
+h1{font-size:24px;margin:0 0 6px}.sub{color:#6b7280;font-size:14px;margin-bottom:18px}
+.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{flex:1;min-width:120px;background:#f9fafb;border-radius:14px;padding:12px}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:#6b7280}
+.grid{width:min(82vw,360px);aspect-ratio:1;margin:16px auto;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:20px;touch-action:none;user-select:none}
+.dot{position:relative;border:3px solid #9ca3af;border-radius:50%;aspect-ratio:1;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#6b7280;cursor:pointer}
+.dot.selected{border-color:#111827;background:#111827;color:#fff;transform:scale(1.06)}
+.dot.selected::after{content:attr(data-order);font-size:13px}
+.dot:not(.selected)::after{content:"";width:12px;height:12px;background:#9ca3af;border-radius:50%}
+.dot.selected span{display:none}
+#lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.gridwrap{position:relative;width:min(82vw,360px);margin:auto}
+button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;cursor:pointer;background:#111827;color:white}
+button.secondary{background:#e5e7eb;color:#111827}button.danger{background:#fee2e2;color:#991b1b}
+button:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.current{text-align:center;min-height:22px;font-size:14px;color:#4b5563}
+.history{max-height:360px;overflow:auto;margin-top:12px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #eee;padding:11px 2px}
+.pattern{font-family:ui-monospace,monospace;font-size:15px}.time{font-size:11px;color:#9ca3af}
+.small{font-size:12px;color:#6b7280}
+input[type=file]{display:none}
+.filebtn{display:inline-block;background:#e5e7eb;color:#111827;padding:11px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+footer{text-align:center;color:#9ca3af;font-size:12px;padding:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Pattern Trial Tracker</h1>
+    <div class="sub">Draw/select a pattern yourself, then mark it as tried. History is stored locally in this browser.</div>
+
+    <div class="stats">
+      <div class="stat"><b id="count">0</b><span>Tried patterns</span></div>
+      <div class="stat"><b id="current">0</b><span>Dots selected</span></div>
+      <div class="stat"><b id="sessions">0</b><span>Saved entries</span></div>
+    </div>
+
+    <div class="gridwrap">
+      <div id="grid" class="grid"></div>
+    </div>
+    <div class="current" id="preview">Select dots in order.</div>
+
+    <div class="actions" style="margin-top:12px">
+      <button id="add">Add to Tried</button>
+      <button id="undo" class="secondary">Undo</button>
+      <button id="clearCurrent" class="secondary">Clear</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:18px;margin:0">History</h2>
+    <div class="small">The list below survives refreshes and browser restarts unless site data is cleared.</div>
+    <div id="history" class="history"></div>
+    <div class="actions" style="margin-top:14px">
+      <button id="export" class="secondary">Export Backup</button>
+      <label class="filebtn">Import Backup<input id="import" type="file" accept=".json,application/json"></label>
+      <button id="clearHistory" class="danger">Clear History</button>
+    </div>
+  </div>
+
+  <footer>Manual tracker only • No automatic pattern generation or phone interaction</footer>
+</div>
+
+<script>
+const KEY="manualPatternTrialHistory.v1";
+let selected=[];
+let history=load();
+
+function load(){
+  try{
+    const x=JSON.parse(localStorage.getItem(KEY)||"[]");
+    return Array.isArray(x)?x:[];
+  }catch{return []}
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(history));render()}
+function key(){return selected.join("-")}
+function makeGrid(){
+  const g=document.getElementById("grid");
+  for(let i=1;i<=9;i++){
+    const d=document.createElement("div");
+    d.className="dot"; d.dataset.n=i; d.dataset.order=""; d.setAttribute("aria-label","Dot "+i);
+    d.addEventListener("pointerdown",e=>{e.preventDefault();select(i)});
+    d.addEventListener("pointerenter",e=>{if(e.buttons)select(i)});
+    g.appendChild(d);
+  }
+}
+function select(n){
+  if(selected.includes(n)) return;
+  selected.push(n);
+  const d=document.querySelector(`.dot[data-n="${n}"]`);
+  d.classList.add("selected"); d.dataset.order=selected.length;
+  document.getElementById("current").textContent=selected.length;
+  document.getElementById("preview").textContent="Pattern: "+selected.join(" → ");
+}
+function clearCurrent(){
+  selected=[];
+  document.querySelectorAll(".dot").forEach(d=>{d.classList.remove("selected");d.dataset.order=""});
+  document.getElementById("current").textContent="0";
+  document.getElementById("preview").textContent="Select dots in order.";
+}
+document.getElementById("add").onclick=()=>{
+  if(selected.length<4){alert("Select at least 4 dots.");return}
+  const k=key();
+  if(history.some(x=>x.pattern===k)){alert("This pattern is already in your history.");return}
+  history.unshift({pattern:k,at:new Date().toISOString()});
+  save(); clearCurrent();
+};
+document.getElementById("undo").onclick=()=>{
+  if(!selected.length)return;
+  selected.pop();
+  document.querySelectorAll(".dot").forEach(d=>{
+    const n=+d.dataset.n, pos=selected.indexOf(n);
+    d.classList.toggle("selected",pos>=0);
+    d.dataset.order=pos>=0?pos+1:"";
+  });
+  document.getElementById("current").textContent=selected.length;
+  document.getElementById("preview").textContent=selected.length?"Pattern: "+selected.join(" → "):"Select dots in order.";
+};
+document.getElementById("clearCurrent").onclick=clearCurrent;
+
+function render(){
+  document.getElementById("count").textContent=history.length;
+  document.getElementById("sessions").textContent=history.length;
+  const h=document.getElementById("history"); h.innerHTML="";
+  if(!history.length){h.innerHTML='<div class="small" style="padding:16px 2px">No tried patterns saved yet.</div>';return}
+  history.forEach((x,i)=>{
+    const row=document.createElement("div");row.className="row";
+    const left=document.createElement("div");
+    left.innerHTML=`<div class="pattern">#${history.length-i} &nbsp; ${escapeHtml(x.pattern)}</div><div class="time">${new Date(x.at).toLocaleString()}</div>`;
+    const b=document.createElement("button");b.textContent="Remove";b.className="secondary";
+    b.onclick=()=>{history.splice(i,1);save()};
+    row.append(left,b);h.append(row);
+  });
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+
+document.getElementById("clearHistory").onclick=()=>{
+  if(confirm("Delete all saved history from this browser?")){history=[];save()}
+};
+document.getElementById("export").onclick=()=>{
+  const blob=new Blob([JSON.stringify({app:"Pattern Trial Tracker",version:1,history},null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="pattern-trial-history.json";a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+document.getElementById("import").onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const data=JSON.parse(r.result);
+      const incoming=Array.isArray(data)?data:data.history;
+      if(!Array.isArray(incoming))throw Error();
+      const map=new Map(history.map(x=>[x.pattern,x]));
+      incoming.forEach(x=>{if(x&&x.pattern)map.set(x.pattern,{pattern:x.pattern,at:x.at||new Date().toISOString()})});
+      history=[...map.values()].sort((a,b)=>new Date(b.at)-new Date(a.at));
+      save(); alert("Backup imported.");
+    }catch{alert("Invalid backup file.")}
+  };
+  r.readAsText(f); e.target.value="";
+};
+makeGrid();render();
+</script>
+</body>
+</html>
