@@ -28,6 +28,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .history{max-height:360px;overflow:auto;margin-top:12px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #eee;padding:11px 2px}
 .pattern{font-family:ui-monospace,monospace;font-size:15px}.time{font-size:11px;color:#9ca3af}
+.mini-pattern{width:64px;height:64px;flex:0 0 64px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;display:flex;align-items:center;justify-content:center;color:#111827}
+.mini-pattern svg{display:block}
+
 .small{font-size:12px;color:#6b7280}
 input[type=file]{display:none}
 .filebtn{display:inline-block;background:#e5e7eb;color:#111827;padding:11px 14px;border-radius:12px;font-weight:700;cursor:pointer}
@@ -135,12 +138,64 @@ function render(){
   const h=document.getElementById("history"); h.innerHTML="";
   if(!history.length){h.innerHTML='<div class="small" style="padding:16px 2px">No tried patterns saved yet.</div>';return}
   history.forEach((x,i)=>{
-    const row=document.createElement("div");row.className="row";
+    const row=document.createElement("div");
+    row.className="row";
+    row.style.alignItems="center";
+
     const left=document.createElement("div");
-    left.innerHTML=`<div class="pattern">#${history.length-i} &nbsp; ${escapeHtml(x.pattern)}</div><div class="time">${new Date(x.at).toLocaleString()}</div>`;
-    const b=document.createElement("button");b.textContent="Remove";b.className="secondary";
+    left.style.display="flex";
+    left.style.alignItems="center";
+    left.style.gap="12px";
+    left.style.minWidth="0";
+
+    const mini = document.createElement("div");
+    mini.className="mini-pattern";
+    mini.setAttribute("aria-label","Pattern "+x.pattern);
+
+    const nums = x.pattern.split("-").map(Number);
+    const pos = {
+      1:[0,0],2:[1,0],3:[2,0],
+      4:[0,1],5:[1,1],6:[2,1],
+      7:[0,2],8:[1,2],9:[2,2]
+    };
+
+    const svgNS="http://www.w3.org/2000/svg";
+    const svg=document.createElementNS(svgNS,"svg");
+    svg.setAttribute("viewBox","0 0 60 60");
+    svg.setAttribute("width","60");
+    svg.setAttribute("height","60");
+
+    const pts=nums.map(n=>[10+pos[n][0]*20,10+pos[n][1]*20]);
+
+    for(let j=0;j<pts.length-1;j++){
+      const line=document.createElementNS(svgNS,"line");
+      line.setAttribute("x1",pts[j][0]); line.setAttribute("y1",pts[j][1]);
+      line.setAttribute("x2",pts[j+1][0]); line.setAttribute("y2",pts[j+1][1]);
+      line.setAttribute("stroke","currentColor");
+      line.setAttribute("stroke-width","2.5");
+      line.setAttribute("stroke-linecap","round");
+      svg.appendChild(line);
+    }
+
+    for(let n=1;n<=9;n++){
+      const [cx,cy]=[10+pos[n][0]*20,10+pos[n][1]*20];
+      const c=document.createElementNS(svgNS,"circle");
+      c.setAttribute("cx",cx); c.setAttribute("cy",cy);
+      c.setAttribute("r",nums.includes(n)?"4":"2.5");
+      c.setAttribute("fill",nums.includes(n)?"currentColor":"#9ca3af");
+      svg.appendChild(c);
+    }
+
+    mini.appendChild(svg);
+
+    const info=document.createElement("div");
+    info.innerHTML=`<div class="pattern">#${history.length-i} &nbsp; ${escapeHtml(x.pattern.replaceAll("-"," → "))}</div><div class="time">${new Date(x.at).toLocaleString()}</div>`;
+    left.append(mini,info);
+
+    const b=document.createElement("button");
+    b.textContent="Remove"; b.className="secondary";
     b.onclick=()=>{history.splice(i,1);save()};
-    row.append(left,b);h.append(row);
+    row.append(left,b); h.append(row);
   });
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
