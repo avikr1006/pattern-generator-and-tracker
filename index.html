@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Pattern Generator - No Circle</title>
+    <title>Pattern Generator - Circle</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -14,7 +14,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #0f172a;
+            background-color: #0f172a;
             color: #f8fafc;
         }
 
@@ -31,927 +31,1252 @@
             border-radius: 4px;
         }
 
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
         .pattern-box {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
         }
 
         .pattern-box:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,.4);
+            box-shadow:
+                0 10px 15px -3px rgba(0, 0, 0, 0.4);
         }
     </style>
 </head>
 
 <body class="min-h-screen flex flex-col">
 
-<header class="bg-slate-900 border-b border-slate-800 p-6 shadow-md sticky top-0 z-10">
-    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+    <!-- =========================================================
+         HEADER
+    ========================================================== -->
 
-        <div>
-            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-500">
-                Pattern Generator
-            </h1>
+    <header class="bg-slate-900 border-b border-slate-800 p-6 shadow-md sticky top-0 z-10">
 
-            <p class="text-slate-400 text-sm mt-1">
-                A4 • 35mm Cards • 5×6 • No Circle
-            </p>
-        </div>
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
 
-        <div class="flex flex-col sm:flex-row items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-500">
+                    Pattern Generator
+                </h1>
 
-            <div class="flex items-center gap-2 bg-slate-800 p-2 rounded-lg border border-slate-700">
-
-                <label for="dotCount" class="text-sm font-medium text-slate-300">
-                    Dots:
-                </label>
-
-                <select
-                    id="dotCount"
-                    class="bg-slate-900 border border-slate-700 text-white text-sm rounded-md p-2 outline-none cursor-pointer"
-                >
-                    <option value="4" selected>4 Dots</option>
-                    <option value="5">5 Dots</option>
-                    <option value="6">6 Dots</option>
-                    <option value="7">7 Dots</option>
-                    <option value="8">8 Dots</option>
-                    <option value="9">9 Dots</option>
-                </select>
+                <p class="text-slate-400 text-sm mt-1">
+                    A4 • 35mm Cards • 5×6 • Circle Edition
+                </p>
             </div>
 
-            <button
-                id="generateBtn"
-                class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-medium rounded-lg text-sm shadow-lg"
-            >
-                Generate Patterns
-            </button>
 
-            <button
-                id="downloadBtn"
-                disabled
-                class="px-5 py-2.5 bg-slate-800 text-slate-500 border border-slate-700 font-medium rounded-lg text-sm cursor-not-allowed"
-            >
-                Download PDF
-            </button>
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+
+                <!-- DOT SELECTOR -->
+
+                <div class="flex items-center gap-2 bg-slate-800 p-2 rounded-lg border border-slate-700">
+
+                    <label
+                        for="dotCount"
+                        class="text-sm font-medium text-slate-300 ml-1"
+                    >
+                        Dots:
+                    </label>
+
+                    <select
+                        id="dotCount"
+                        class="bg-slate-900 border border-slate-700 text-white text-sm rounded-md p-2 outline-none cursor-pointer"
+                    >
+                        <option value="4" selected>4 Dots</option>
+                        <option value="5">5 Dots</option>
+                        <option value="6">6 Dots</option>
+                        <option value="7">7 Dots</option>
+                        <option value="8">8 Dots</option>
+                        <option value="9">9 Dots</option>
+                    </select>
+
+                </div>
+
+
+                <!-- GENERATE -->
+
+                <button
+                    id="generateBtn"
+                    class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-medium rounded-lg text-sm transition-all shadow-lg shadow-cyan-500/30 flex items-center gap-2 cursor-pointer"
+                >
+                    Generate Patterns
+                </button>
+
+
+                <!-- DOWNLOAD -->
+
+                <button
+                    id="downloadBtn"
+                    disabled
+                    class="px-5 py-2.5 bg-slate-800 text-slate-500 border border-slate-700 font-medium rounded-lg text-sm cursor-not-allowed"
+                >
+                    Download PDF
+                </button>
+
+            </div>
 
         </div>
-    </div>
-</header>
+
+    </header>
 
 
-<main class="flex-grow p-6 max-w-6xl mx-auto w-full">
+    <!-- =========================================================
+         MAIN
+    ========================================================== -->
 
-    <div id="statusArea" class="mb-6 border-b border-slate-800 pb-4 hidden">
+    <main class="flex-grow p-6 max-w-6xl mx-auto w-full">
 
-        <h2 class="text-xl font-semibold text-white">
-            Generation Results
-        </h2>
+        <!-- STATUS -->
 
-        <p id="statsText" class="text-slate-400 text-sm mt-1">
-            Found 0 patterns.
-        </p>
-
-    </div>
-
-    <div
-        id="patternGrid"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 pb-12"
-    ></div>
-
-    <div id="emptyState" class="text-center mt-32 opacity-50">
-
-        <h2 class="text-xl font-medium text-slate-400">
-            Ready to Generate
-        </h2>
-
-        <p class="text-slate-500 text-sm mt-2">
-            Select dots and click Generate Patterns.
-        </p>
-
-    </div>
-
-</main>
-
-
-<div
-    id="progressOverlay"
-    class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center"
->
-
-    <div class="bg-slate-900 border border-slate-700 rounded-xl p-8 max-w-md w-full text-center">
-
-        <h3 class="text-xl font-bold text-white mb-2">
-            Generating PDF
-        </h3>
-
-        <p
-            id="progressDesc"
-            class="text-slate-400 text-sm mb-6"
+        <div
+            id="statusArea"
+            class="mb-6 border-b border-slate-800 pb-4 hidden"
         >
-            Drawing A4 pattern cards...
-        </p>
 
-        <div class="w-full bg-slate-800 rounded-full h-2.5">
+            <h2 class="text-xl font-semibold text-white">
+                Generation Results
+            </h2>
+
+            <p
+                id="statsText"
+                class="text-slate-400 text-sm mt-1"
+            >
+                Found 0 patterns.
+            </p>
+
+
+            <!-- IMPORTANT:
+                 Browser preview warning.
+                 PDF still contains ALL patterns.
+            -->
 
             <div
-                id="progressBar"
-                class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-2.5 rounded-full"
-                style="width:0%"
-            ></div>
+                id="warningContainer"
+                class="hidden mt-3"
+            >
+
+                <p
+                    id="warningText"
+                    class="text-amber-400 text-sm font-medium bg-amber-400/10 border border-amber-400/20 rounded-lg p-3"
+                ></p>
+
+            </div>
 
         </div>
 
-        <p
-            id="progressPercent"
-            class="text-xs text-slate-500 mt-2"
+
+        <!-- PREVIEW GRID -->
+
+        <div
+            id="patternGrid"
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 pb-12"
+        ></div>
+
+
+        <!-- EMPTY STATE -->
+
+        <div
+            id="emptyState"
+            class="text-center mt-32 opacity-50"
         >
-            0%
-        </p>
+
+            <h2 class="text-xl font-medium text-slate-400">
+                Ready to Generate
+            </h2>
+
+            <p class="text-slate-500 text-sm mt-2">
+                Select dots and click Generate Patterns.
+            </p>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================================================
+         PROGRESS OVERLAY
+    ========================================================== -->
+
+    <div
+        id="progressOverlay"
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center"
+    >
+
+        <div
+            class="bg-slate-900 border border-slate-700 rounded-xl p-8 max-w-md w-full text-center"
+        >
+
+            <h3
+                id="progressTitle"
+                class="text-xl font-bold text-white mb-2"
+            >
+                Generating PDF
+            </h3>
+
+            <p
+                id="progressDesc"
+                class="text-slate-400 text-sm mb-6"
+            >
+                Drawing A4 pattern cards...
+            </p>
+
+            <div class="w-full bg-slate-800 rounded-full h-2.5">
+
+                <div
+                    id="progressBar"
+                    class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-2.5 rounded-full"
+                    style="width: 0%"
+                ></div>
+
+            </div>
+
+            <p
+                id="progressPercent"
+                class="text-xs text-slate-500 mt-2"
+            >
+                0%
+            </p>
+
+        </div>
 
     </div>
-</div>
 
 
-<script>
+    <script>
 
-const PREVIEW_LIMIT = 100;
+        /* =========================================================
+           CONFIGURATION
+        ========================================================== */
 
-let generatedSequences = [];
+        const PREVIEW_LIMIT = 100;
 
+        let generatedSequences = [];
 
-/* =========================================================
-   BLOCKING MATRIX
-========================================================= */
 
-const blockMatrix =
-    Array.from(
-        { length: 9 },
-        () => Array(9).fill(-1)
-    );
+        /* =========================================================
+           ANDROID PATTERN BLOCKING MATRIX
 
-blockMatrix[0][2] = 1;
-blockMatrix[2][0] = 1;
+           0 1 2
+           3 4 5
+           6 7 8
+        ========================================================== */
 
-blockMatrix[3][5] = 4;
-blockMatrix[5][3] = 4;
-
-blockMatrix[6][8] = 7;
-blockMatrix[8][6] = 7;
-
-blockMatrix[0][6] = 3;
-blockMatrix[6][0] = 3;
-
-blockMatrix[1][7] = 4;
-blockMatrix[7][1] = 4;
-
-blockMatrix[2][8] = 5;
-blockMatrix[8][2] = 5;
-
-blockMatrix[0][8] = 4;
-blockMatrix[8][0] = 4;
-
-blockMatrix[2][6] = 4;
-blockMatrix[6][2] = 4;
-
-
-/* =========================================================
-   DOM
-========================================================= */
-
-const generateBtn =
-    document.getElementById("generateBtn");
-
-const downloadBtn =
-    document.getElementById("downloadBtn");
-
-const dotCount =
-    document.getElementById("dotCount");
-
-const patternGrid =
-    document.getElementById("patternGrid");
-
-const statusArea =
-    document.getElementById("statusArea");
-
-const statsText =
-    document.getElementById("statsText");
-
-const emptyState =
-    document.getElementById("emptyState");
-
-const progressOverlay =
-    document.getElementById("progressOverlay");
-
-const progressBar =
-    document.getElementById("progressBar");
-
-const progressPercent =
-    document.getElementById("progressPercent");
-
-
-/* =========================================================
-   GENERATE PATTERNS
-========================================================= */
-
-function generatePatterns(length) {
-
-    const result = [];
-
-    function dfs(current, visited, path) {
-
-        if (path.length === length) {
-
-            result.push([...path]);
-
-            return;
-        }
-
-        for (let next = 0; next < 9; next++) {
-
-            if (visited[next]) {
-                continue;
-            }
-
-            const blocking =
-                blockMatrix[current][next];
-
-            if (
-                blocking === -1 ||
-                visited[blocking]
-            ) {
-
-                visited[next] = true;
-
-                path.push(next);
-
-                dfs(
-                    next,
-                    visited,
-                    path
-                );
-
-                path.pop();
-
-                visited[next] = false;
-            }
-        }
-    }
-
-    for (let start = 0; start < 9; start++) {
-
-        const visited =
-            new Array(9).fill(false);
-
-        visited[start] = true;
-
-        dfs(
-            start,
-            visited,
-            [start]
-        );
-    }
-
-    return result;
-}
-
-
-/* =========================================================
-   PREVIEW
-========================================================= */
-
-function createSVG(sequence) {
-
-    const points = [
-        [25,35],[50,35],[75,35],
-        [25,60],[50,60],[75,60],
-        [25,85],[50,85],[75,85]
-    ];
-
-    let svg = `
-        <svg
-            viewBox="0 0 100 100"
-            class="w-full h-full"
-        >
-    `;
-
-    for (let i = 0; i < 9; i++) {
-
-        svg += `
-            <circle
-                cx="${points[i][0]}"
-                cy="${points[i][1]}"
-                r="3"
-                fill="#475569"
-            />
-        `;
-    }
-
-    let path = `
-        M
-        ${points[sequence[0]][0]}
-        ${points[sequence[0]][1]}
-    `;
-
-    for (let i = 1; i < sequence.length; i++) {
-
-        path += `
-            L
-            ${points[sequence[i]][0]}
-            ${points[sequence[i]][1]}
-        `;
-    }
-
-    svg += `
-        <path
-            d="${path}"
-            fill="none"
-            stroke="#0ea5e9"
-            stroke-width="3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        />
-    `;
-
-    for (let i = 1; i < sequence.length; i++) {
-
-        const p =
-            points[sequence[i]];
-
-        svg += `
-            <circle
-                cx="${p[0]}"
-                cy="${p[1]}"
-                r="4.5"
-                fill="#38bdf8"
-            />
-        `;
-    }
-
-    const start =
-        points[sequence[0]];
-
-    svg += `
-        <circle
-            cx="${start[0]}"
-            cy="${start[1]}"
-            r="5.5"
-            fill="#ef4444"
-        />
-    `;
-
-    return svg + "</svg>";
-}
-
-
-function showPreview() {
-
-    patternGrid.innerHTML = "";
-
-    const limit =
-        Math.min(
-            generatedSequences.length,
-            PREVIEW_LIMIT
-        );
-
-    for (let i = 0; i < limit; i++) {
-
-        const card =
-            document.createElement("div");
-
-        card.className =
-            "pattern-box bg-[#1e293b] rounded-xl aspect-square relative overflow-hidden border border-slate-700/50";
-
-        card.innerHTML =
-            createSVG(
-                generatedSequences[i]
+        const blockMatrix =
+            Array.from(
+                { length: 9 },
+                () => Array(9).fill(-1)
             );
 
-        const number =
-            document.createElement("span");
+        blockMatrix[0][2] = 1;
+        blockMatrix[2][0] = 1;
 
-        number.className =
-            "absolute top-3 left-3 text-xs text-[#22c55e] font-mono font-bold";
+        blockMatrix[3][5] = 4;
+        blockMatrix[5][3] = 4;
 
-        number.textContent =
-            `#${i + 1}`;
+        blockMatrix[6][8] = 7;
+        blockMatrix[8][6] = 7;
 
-        card.appendChild(number);
+        blockMatrix[0][6] = 3;
+        blockMatrix[6][0] = 3;
 
-        patternGrid.appendChild(card);
-    }
-}
+        blockMatrix[1][7] = 4;
+        blockMatrix[7][1] = 4;
 
+        blockMatrix[2][8] = 5;
+        blockMatrix[8][2] = 5;
 
-/* =========================================================
-   GENERATE
-========================================================= */
+        blockMatrix[0][8] = 4;
+        blockMatrix[8][0] = 4;
 
-generateBtn.addEventListener(
-    "click",
-    () => {
+        blockMatrix[2][6] = 4;
+        blockMatrix[6][2] = 4;
 
-        const count =
-            Number(dotCount.value);
 
-        emptyState.style.display =
-            "none";
+        /* =========================================================
+           DOM REFERENCES
+        ========================================================== */
 
-        statusArea.classList.remove(
-            "hidden"
-        );
+        const generateBtn =
+            document.getElementById("generateBtn");
 
-        statsText.textContent =
-            "Calculating patterns...";
+        const downloadBtn =
+            document.getElementById("downloadBtn");
 
-        generateBtn.disabled = true;
+        const dotCount =
+            document.getElementById("dotCount");
 
-        setTimeout(() => {
+        const patternGrid =
+            document.getElementById("patternGrid");
 
-            const start =
-                performance.now();
+        const statusArea =
+            document.getElementById("statusArea");
 
-            generatedSequences =
-                generatePatterns(count);
+        const statsText =
+            document.getElementById("statsText");
 
-            const time =
-                performance.now() - start;
+        const warningContainer =
+            document.getElementById("warningContainer");
 
-            statsText.innerHTML =
-                `
-                Found
-                <strong class="text-white">
-                    ${generatedSequences.length.toLocaleString()}
-                </strong>
-                valid patterns in
-                ${time.toFixed(2)}ms.
-                `;
+        const warningText =
+            document.getElementById("warningText");
 
-            showPreview();
+        const emptyState =
+            document.getElementById("emptyState");
 
-            generateBtn.disabled =
-                false;
+        const progressOverlay =
+            document.getElementById("progressOverlay");
 
-            downloadBtn.disabled =
-                false;
+        const progressTitle =
+            document.getElementById("progressTitle");
 
-            downloadBtn.className =
-                `
-                px-5 py-2.5
-                bg-gradient-to-r
-                from-emerald-600 to-teal-600
-                text-white font-medium
-                rounded-lg text-sm
-                cursor-pointer
-                `;
+        const progressDesc =
+            document.getElementById("progressDesc");
 
-        }, 50);
-    }
-);
+        const progressBar =
+            document.getElementById("progressBar");
 
+        const progressPercent =
+            document.getElementById("progressPercent");
 
-/* =========================================================
-   PDF
-========================================================= */
 
-downloadBtn.addEventListener(
-    "click",
-    async () => {
+        /* =========================================================
+           PATTERN GENERATOR
+        ========================================================== */
 
-        if (!generatedSequences.length) {
-            return;
-        }
+        function generatePatterns(length) {
 
-        progressOverlay.classList.remove(
-            "hidden"
-        );
+            const result = [];
 
-        progressOverlay.classList.add(
-            "flex"
-        );
 
-        progressBar.style.width =
-            "0%";
+            function dfs(current, visited, path) {
 
-        progressPercent.textContent =
-            "0%";
+                if (path.length === length) {
 
-        await new Promise(
-            r => setTimeout(r, 100)
-        );
+                    result.push([...path]);
 
+                    return;
+                }
 
-        try {
 
-            const {
-                jsPDF
-            } = window.jspdf;
+                for (let next = 0; next < 9; next++) {
 
+                    if (visited[next]) {
+                        continue;
+                    }
 
-            /* =========================================
-               PAGE
-            ========================================= */
 
-            const pageWidth = 210;
-            const pageHeight = 297;
+                    const blocking =
+                        blockMatrix[current][next];
 
 
-            /* =========================================
-               LAYOUT
-            ========================================= */
-
-            const columns = 5;
-            const rows = 6;
-
-            const cardSize = 35;
-
-            const horizontalGap = 5;
-
-            const verticalGap = 13.5;
-
-            const leftMargin = 7.5;
-
-            const topMargin = 3;
-
-            const itemsPerPage =
-                columns * rows;
-
-
-            /* =========================================
-               COLORS
-            ========================================= */
-
-            const PAGE_BG =
-                [15, 23, 42];
-
-            const CARD_BG =
-                [30, 41, 59];
-
-            const NUMBER =
-                [34, 197, 94];
-
-            const LINE =
-                [14, 165, 233];
-
-            const SELECTED =
-                [56, 189, 248];
-
-            const START =
-                [239, 68, 68];
-
-            const BASE =
-                [71, 85, 105];
-
-
-            /* =========================================
-               PDF
-            ========================================= */
-
-            const doc =
-                new jsPDF({
-                    orientation: "portrait",
-                    unit: "mm",
-                    format: "a4",
-                    compress: true
-                });
-
-
-            function paintPage() {
-
-                doc.setFillColor(
-                    ...PAGE_BG
-                );
-
-                doc.rect(
-                    0,
-                    0,
-                    pageWidth,
-                    pageHeight,
-                    "F"
-                );
-            }
-
-
-            /* =========================================
-               CARD
-            ========================================= */
-
-            function drawCard(
-                sequence,
-                number,
-                x,
-                y
-            ) {
-
-                doc.setFillColor(
-                    ...CARD_BG
-                );
-
-                doc.roundedRect(
-                    x,
-                    y,
-                    cardSize,
-                    cardSize,
-                    2.2,
-                    2.2,
-                    "F"
-                );
-
-
-                /* Number */
-
-                doc.setFont(
-                    "helvetica",
-                    "bold"
-                );
-
-                doc.setFontSize(
-                    5.5
-                );
-
-                doc.setTextColor(
-                    ...NUMBER
-                );
-
-                doc.text(
-                    `#${number}`,
-                    x + 2.5,
-                    y + 4.5
-                );
-
-
-                /* Grid */
-
-                const spacing = 9.5;
-
-                const offset =
-                    (
-                        cardSize -
-                        spacing * 2
-                    ) / 2;
-
-                const points = [];
-
-
-                for (
-                    let row = 0;
-                    row < 3;
-                    row++
-                ) {
-
-                    for (
-                        let col = 0;
-                        col < 3;
-                        col++
+                    if (
+                        blocking === -1 ||
+                        visited[blocking]
                     ) {
 
-                        points.push([
-                            x +
-                            offset +
-                            col * spacing,
+                        visited[next] = true;
 
-                            y +
-                            offset +
-                            row * spacing
-                        ]);
+                        path.push(next);
+
+                        dfs(
+                            next,
+                            visited,
+                            path
+                        );
+
+                        path.pop();
+
+                        visited[next] = false;
                     }
                 }
+            }
 
 
-                /* Base dots */
+            for (let start = 0; start < 9; start++) {
 
-                doc.setFillColor(
-                    ...BASE
-                );
+                const visited =
+                    new Array(9).fill(false);
 
-                for (let i = 0; i < 9; i++) {
+                visited[start] = true;
 
-                    doc.circle(
-                        points[i][0],
-                        points[i][1],
-                        1.15,
-                        "F"
-                    );
-                }
-
-
-                /* Lines */
-
-                doc.setDrawColor(
-                    ...LINE
-                );
-
-                doc.setLineWidth(
-                    0.9
-                );
-
-                doc.setLineCap(
-                    "round"
-                );
-
-                doc.setLineJoin(
-                    "round"
-                );
-
-
-                for (
-                    let i = 0;
-                    i < sequence.length - 1;
-                    i++
-                ) {
-
-                    const a =
-                        points[
-                            sequence[i]
-                        ];
-
-                    const b =
-                        points[
-                            sequence[i + 1]
-                        ];
-
-                    doc.line(
-                        a[0],
-                        a[1],
-                        b[0],
-                        b[1]
-                    );
-                }
-
-
-                /* Selected dots */
-
-                doc.setFillColor(
-                    ...SELECTED
-                );
-
-                for (
-                    let i = 1;
-                    i < sequence.length;
-                    i++
-                ) {
-
-                    const p =
-                        points[
-                            sequence[i]
-                        ];
-
-                    doc.circle(
-                        p[0],
-                        p[1],
-                        1.55,
-                        "F"
-                    );
-                }
-
-
-                /* Start dot */
-
-                const start =
-                    points[
-                        sequence[0]
-                    ];
-
-                doc.setFillColor(
-                    ...START
-                );
-
-                doc.circle(
-                    start[0],
-                    start[1],
-                    1.9,
-                    "F"
+                dfs(
+                    start,
+                    visited,
+                    [start]
                 );
             }
 
 
-            /* First page */
+            return result;
+        }
 
-            paintPage();
+
+        /* =========================================================
+           SVG PREVIEW
+        ========================================================== */
+
+        function createSVG(sequence) {
+
+            const points = [
+                [25, 35],
+                [50, 35],
+                [75, 35],
+
+                [25, 60],
+                [50, 60],
+                [75, 60],
+
+                [25, 85],
+                [50, 85],
+                [75, 85]
+            ];
 
 
-            /* =========================================
-               DRAW PATTERNS
-            ========================================= */
+            let svg = `
+                <svg
+                    viewBox="0 0 100 100"
+                    class="w-full h-full"
+                >
+            `;
+
+
+            /* Base dots */
+
+            for (let i = 0; i < 9; i++) {
+
+                svg += `
+                    <circle
+                        cx="${points[i][0]}"
+                        cy="${points[i][1]}"
+                        r="3"
+                        fill="#475569"
+                    />
+                `;
+            }
+
+
+            /* Connecting path */
+
+            let path = `
+                M
+                ${points[sequence[0]][0]}
+                ${points[sequence[0]][1]}
+            `;
+
 
             for (
-                let i = 0;
-                i < generatedSequences.length;
+                let i = 1;
+                i < sequence.length;
                 i++
             ) {
 
-                if (
-                    i > 0 &&
-                    i % itemsPerPage === 0
-                ) {
-
-                    doc.addPage(
-                        "a4",
-                        "portrait"
-                    );
-
-                    paintPage();
-                }
-
-
-                const local =
-                    i % itemsPerPage;
-
-                const row =
-                    Math.floor(
-                        local / columns
-                    );
-
-                const col =
-                    local % columns;
-
-
-                const x =
-                    leftMargin +
-                    col *
-                    (
-                        cardSize +
-                        horizontalGap
-                    );
-
-
-                const y =
-                    topMargin +
-                    row *
-                    (
-                        cardSize +
-                        verticalGap
-                    );
-
-
-                drawCard(
-                    generatedSequences[i],
-                    i + 1,
-                    x,
-                    y
-                );
-
-
-                if (
-                    i % 100 === 0 ||
-                    i ===
-                    generatedSequences.length - 1
-                ) {
-
-                    const percent =
-                        Math.round(
-                            (
-                                (i + 1) /
-                                generatedSequences.length
-                            ) * 100
-                        );
-
-                    progressBar.style.width =
-                        `${percent}%`;
-
-                    progressPercent.textContent =
-                        `${percent}%`;
-
-                    await new Promise(
-                        r => setTimeout(r, 0)
-                    );
-                }
+                path += `
+                    L
+                    ${points[sequence[i]][0]}
+                    ${points[sequence[i]][1]}
+                `;
             }
 
 
-            /* Save */
+            svg += `
+                <path
+                    d="${path}"
+                    fill="none"
+                    stroke="#0ea5e9"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            `;
 
-            const dots =
-                dotCount.value;
 
-            doc.save(
-                `A4-Pattern-Layout-${dots}Dots-No-Circle.pdf`
-            );
+            /* Selected dots */
+
+            for (
+                let i = 1;
+                i < sequence.length;
+                i++
+            ) {
+
+                const point =
+                    points[sequence[i]];
+
+                svg += `
+                    <circle
+                        cx="${point[0]}"
+                        cy="${point[1]}"
+                        r="4.5"
+                        fill="#38bdf8"
+                    />
+                `;
+            }
 
 
-        } catch (error) {
+            /* Starting dot */
 
-            console.error(
-                "PDF Error:",
-                error
-            );
+            const start =
+                points[sequence[0]];
 
-            alert(
-                "PDF generation failed. Check console."
-            );
+            svg += `
+                <circle
+                    cx="${start[0]}"
+                    cy="${start[1]}"
+                    r="5.5"
+                    fill="#ef4444"
+                />
+            `;
 
-        } finally {
 
-            progressOverlay.classList.add(
-                "hidden"
-            );
-
-            progressOverlay.classList.remove(
-                "flex"
-            );
+            return svg + "</svg>";
         }
-    }
-);
 
-</script>
+
+        /* =========================================================
+           BROWSER PREVIEW
+
+           IMPORTANT:
+           Only first 100 are rendered in browser.
+           ALL patterns remain in generatedSequences.
+        ========================================================== */
+
+        function showPreview() {
+
+            patternGrid.innerHTML = "";
+
+
+            const limit =
+                Math.min(
+                    generatedSequences.length,
+                    PREVIEW_LIMIT
+                );
+
+
+            for (let i = 0; i < limit; i++) {
+
+                const card =
+                    document.createElement("div");
+
+
+                card.className =
+                    "pattern-box bg-[#1e293b] rounded-xl aspect-square relative overflow-hidden border border-slate-700/50";
+
+
+                card.innerHTML =
+                    createSVG(
+                        generatedSequences[i]
+                    );
+
+
+                const number =
+                    document.createElement("span");
+
+
+                number.className =
+                    "absolute top-3 left-3 text-xs text-[#22c55e] font-mono font-bold";
+
+
+                number.textContent =
+                    `#${i + 1}`;
+
+
+                card.appendChild(number);
+
+                patternGrid.appendChild(card);
+            }
+        }
+
+
+        /* =========================================================
+           GENERATE BUTTON
+        ========================================================== */
+
+        generateBtn.addEventListener(
+            "click",
+            () => {
+
+                const count =
+                    Number(dotCount.value);
+
+
+                emptyState.style.display =
+                    "none";
+
+
+                statusArea.classList.remove(
+                    "hidden"
+                );
+
+
+                statsText.textContent =
+                    "Calculating patterns...";
+
+
+                warningContainer.classList.add(
+                    "hidden"
+                );
+
+
+                generateBtn.disabled =
+                    true;
+
+
+                setTimeout(() => {
+
+                    const start =
+                        performance.now();
+
+
+                    /* ALL patterns generated */
+
+                    generatedSequences =
+                        generatePatterns(count);
+
+
+                    const time =
+                        performance.now() -
+                        start;
+
+
+                    statsText.innerHTML =
+                        `
+                        Found
+                        <strong class="text-white">
+                            ${generatedSequences.length.toLocaleString()}
+                        </strong>
+                        valid patterns in
+                        ${time.toFixed(2)}ms.
+                        `;
+
+
+                    /* Browser warning */
+
+                    if (
+                        generatedSequences.length >
+                        PREVIEW_LIMIT
+                    ) {
+
+                        warningText.innerHTML =
+                            `
+                            ⚠️ Browser preview is limited to the first
+                            <strong>${PREVIEW_LIMIT}</strong>
+                            patterns to prevent rendering lag.
+
+                            <br>
+
+                            <span class="text-slate-400">
+                                All
+                                <strong class="text-white">
+                                    ${generatedSequences.length.toLocaleString()}
+                                </strong>
+                                generated patterns will be included
+                                in the downloaded PDF.
+                            </span>
+                            `;
+
+
+                        warningContainer.classList.remove(
+                            "hidden"
+                        );
+
+                    } else {
+
+                        warningContainer.classList.add(
+                            "hidden"
+                        );
+                    }
+
+
+                    showPreview();
+
+
+                    generateBtn.disabled =
+                        false;
+
+
+                    downloadBtn.disabled =
+                        false;
+
+
+                    downloadBtn.className =
+                        `
+                        px-5 py-2.5
+                        bg-gradient-to-r
+                        from-emerald-600
+                        to-teal-600
+                        text-white font-medium
+                        rounded-lg text-sm
+                        cursor-pointer
+                        `;
+                }, 50);
+            }
+        );
+
+
+        /* =========================================================
+           PDF EXPORT
+        ========================================================== */
+
+        downloadBtn.addEventListener(
+            "click",
+            async () => {
+
+                if (!generatedSequences.length) {
+                    return;
+                }
+
+
+                progressOverlay.classList.remove(
+                    "hidden"
+                );
+
+                progressOverlay.classList.add(
+                    "flex"
+                );
+
+
+                progressTitle.textContent =
+                    "Generating A4 PDF";
+
+
+                progressDesc.textContent =
+                    `
+                    Drawing all
+                    ${generatedSequences.length.toLocaleString()}
+                    generated patterns...
+                    `;
+
+
+                progressBar.style.width =
+                    "0%";
+
+
+                progressPercent.textContent =
+                    "0%";
+
+
+                await new Promise(
+                    r => setTimeout(r, 100)
+                );
+
+
+                try {
+
+                    const {
+                        jsPDF
+                    } = window.jspdf;
+
+
+                    /* =====================================================
+                       A4
+                    ====================================================== */
+
+                    const pageWidth = 210;
+                    const pageHeight = 297;
+
+
+                    /* =====================================================
+                       LAYOUT
+                    ====================================================== */
+
+                    const columns = 5;
+                    const rows = 6;
+
+                    const cardSize = 35;
+
+                    const horizontalGap = 5;
+
+                    const verticalGap = 13.5;
+
+                    const leftMargin = 7.5;
+
+                    const topMargin = 3;
+
+                    const itemsPerPage =
+                        columns * rows;
+
+
+                    /* =====================================================
+                       COLORS
+                    ====================================================== */
+
+                    const PAGE_BG =
+                        [15, 23, 42];
+
+                    const CARD_BG =
+                        [30, 41, 59];
+
+                    const NUMBER =
+                        [34, 197, 94];
+
+                    const LINE =
+                        [14, 165, 233];
+
+                    const SELECTED =
+                        [56, 189, 248];
+
+                    const START =
+                        [239, 68, 68];
+
+                    const BASE =
+                        [71, 85, 105];
+
+
+                    /* =====================================================
+                       PDF
+
+                       compress:true = smaller PDF size
+                    ====================================================== */
+
+                    const doc =
+                        new jsPDF({
+                            orientation: "portrait",
+                            unit: "mm",
+                            format: "a4",
+                            compress: true
+                        });
+
+
+                    /* =====================================================
+                       PAINT PAGE
+                    ====================================================== */
+
+                    function paintPage() {
+
+                        doc.setFillColor(
+                            ...PAGE_BG
+                        );
+
+                        doc.rect(
+                            0,
+                            0,
+                            pageWidth,
+                            pageHeight,
+                            "F"
+                        );
+                    }
+
+
+                    /* =====================================================
+                       DRAW PATTERN CARD
+                    ====================================================== */
+
+                    function drawCard(
+                        sequence,
+                        number,
+                        x,
+                        y
+                    ) {
+
+                        /* Card */
+
+                        doc.setFillColor(
+                            ...CARD_BG
+                        );
+
+                        doc.roundedRect(
+                            x,
+                            y,
+                            cardSize,
+                            cardSize,
+                            2.2,
+                            2.2,
+                            "F"
+                        );
+
+
+                        /* Green number */
+
+                        doc.setFont(
+                            "helvetica",
+                            "bold"
+                        );
+
+                        doc.setFontSize(
+                            5.5
+                        );
+
+                        doc.setTextColor(
+                            ...NUMBER
+                        );
+
+                        doc.text(
+                            `#${number}`,
+                            x + 2.5,
+                            y + 4.5
+                        );
+
+
+                        /* Pattern grid */
+
+                        const spacing = 9.5;
+
+                        const offset =
+                            (
+                                cardSize -
+                                spacing * 2
+                            ) / 2;
+
+
+                        const points = [];
+
+
+                        for (
+                            let row = 0;
+                            row < 3;
+                            row++
+                        ) {
+
+                            for (
+                                let col = 0;
+                                col < 3;
+                                col++
+                            ) {
+
+                                points.push([
+                                    x +
+                                    offset +
+                                    col * spacing,
+
+                                    y +
+                                    offset +
+                                    row * spacing
+                                ]);
+                            }
+                        }
+
+
+                        /* Base dots */
+
+                        doc.setFillColor(
+                            ...BASE
+                        );
+
+
+                        for (
+                            let i = 0;
+                            i < 9;
+                            i++
+                        ) {
+
+                            doc.circle(
+                                points[i][0],
+                                points[i][1],
+                                1.15,
+                                "F"
+                            );
+                        }
+
+
+                        /* Connecting lines */
+
+                        doc.setDrawColor(
+                            ...LINE
+                        );
+
+                        doc.setLineWidth(
+                            0.9
+                        );
+
+                        doc.setLineCap(
+                            "round"
+                        );
+
+                        doc.setLineJoin(
+                            "round"
+                        );
+
+
+                        for (
+                            let i = 0;
+                            i < sequence.length - 1;
+                            i++
+                        ) {
+
+                            const a =
+                                points[
+                                    sequence[i]
+                                ];
+
+                            const b =
+                                points[
+                                    sequence[i + 1]
+                                ];
+
+
+                            doc.line(
+                                a[0],
+                                a[1],
+                                b[0],
+                                b[1]
+                            );
+                        }
+
+
+                        /* Selected dots */
+
+                        doc.setFillColor(
+                            ...SELECTED
+                        );
+
+
+                        for (
+                            let i = 1;
+                            i < sequence.length;
+                            i++
+                        ) {
+
+                            const p =
+                                points[
+                                    sequence[i]
+                                ];
+
+
+                            doc.circle(
+                                p[0],
+                                p[1],
+                                1.55,
+                                "F"
+                            );
+                        }
+
+
+                        /* Starting dot */
+
+                        const start =
+                            points[
+                                sequence[0]
+                            ];
+
+
+                        doc.setFillColor(
+                            ...START
+                        );
+
+
+                        doc.circle(
+                            start[0],
+                            start[1],
+                            1.9,
+                            "F"
+                        );
+                    }
+
+
+                    /* =====================================================
+                       WHITE CHECK CIRCLE
+                    ====================================================== */
+
+                    function drawCheckCircle(
+                        x,
+                        y
+                    ) {
+
+                        const centerX =
+                            x +
+                            cardSize / 2;
+
+
+                        const centerY =
+                            y +
+                            cardSize +
+                            verticalGap / 2;
+
+
+                        doc.setFillColor(
+                            255,
+                            255,
+                            255
+                        );
+
+
+                        doc.setDrawColor(
+                            148,
+                            163,
+                            184
+                        );
+
+
+                        doc.setLineWidth(
+                            0.45
+                        );
+
+
+                        doc.circle(
+                            centerX,
+                            centerY,
+                            3.5,
+                            "FD"
+                        );
+                    }
+
+
+                    /* =====================================================
+                       FIRST PAGE
+                    ====================================================== */
+
+                    paintPage();
+
+
+                    /* =====================================================
+                       ALL PATTERNS → PDF
+
+                       NOTE:
+                       This uses generatedSequences.length,
+                       NOT PREVIEW_LIMIT.
+                    ====================================================== */
+
+                    for (
+                        let i = 0;
+                        i < generatedSequences.length;
+                        i++
+                    ) {
+
+                        if (
+                            i > 0 &&
+                            i % itemsPerPage === 0
+                        ) {
+
+                            doc.addPage(
+                                "a4",
+                                "portrait"
+                            );
+
+                            paintPage();
+                        }
+
+
+                        const local =
+                            i % itemsPerPage;
+
+
+                        const row =
+                            Math.floor(
+                                local / columns
+                            );
+
+
+                        const col =
+                            local % columns;
+
+
+                        const x =
+                            leftMargin +
+                            col *
+                            (
+                                cardSize +
+                                horizontalGap
+                            );
+
+
+                        const y =
+                            topMargin +
+                            row *
+                            (
+                                cardSize +
+                                verticalGap
+                            );
+
+
+                        drawCard(
+                            generatedSequences[i],
+                            i + 1,
+                            x,
+                            y
+                        );
+
+
+                        /* Circle below every card */
+
+                        drawCheckCircle(
+                            x,
+                            y
+                        );
+
+
+                        /* Progress */
+
+                        if (
+                            i % 100 === 0 ||
+                            i ===
+                            generatedSequences.length - 1
+                        ) {
+
+                            const percent =
+                                Math.round(
+                                    (
+                                        (i + 1) /
+                                        generatedSequences.length
+                                    ) * 100
+                                );
+
+
+                            progressBar.style.width =
+                                `${percent}%`;
+
+
+                            progressPercent.textContent =
+                                `${percent}%`;
+
+
+                            await new Promise(
+                                r => setTimeout(r, 0)
+                            );
+                        }
+                    }
+
+
+                    /* =====================================================
+                       SAVE
+                    ====================================================== */
+
+                    const dots =
+                        dotCount.value;
+
+
+                    doc.save(
+                        `A4-Pattern-Layout-${dots}Dots-Circle.pdf`
+                    );
+
+
+                } catch (error) {
+
+                    console.error(
+                        "PDF Error:",
+                        error
+                    );
+
+
+                    progressTitle.textContent =
+                        "PDF Generation Failed";
+
+
+                    progressDesc.textContent =
+                        "Please check the browser console.";
+
+                    await new Promise(
+                        r => setTimeout(r, 2500)
+                    );
+
+
+                } finally {
+
+                    progressOverlay.classList.add(
+                        "hidden"
+                    );
+
+                    progressOverlay.classList.remove(
+                        "flex"
+                    );
+                }
+            }
+        );
+
+    </script>
 
 </body>
 </html>
