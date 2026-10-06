@@ -1,242 +1,957 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Pattern Trial Tracker</title>
-<style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#111827;background:#f3f4f6}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:linear-gradient(135deg,#f8fafc,#e5e7eb);padding:20px}
-.wrap{max-width:760px;margin:auto}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:20px;box-shadow:0 10px 30px #00000010;margin-bottom:16px}
-h1{font-size:24px;margin:0 0 6px}.sub{color:#6b7280;font-size:14px;margin-bottom:18px}
-.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{flex:1;min-width:120px;background:#f9fafb;border-radius:14px;padding:12px}.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:#6b7280}
-.grid{width:min(82vw,360px);aspect-ratio:1;margin:16px auto;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:20px;touch-action:none;user-select:none}
-.dot{position:relative;border:3px solid #9ca3af;border-radius:50%;aspect-ratio:1;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#6b7280;cursor:pointer}
-.dot.selected{border-color:#111827;background:#111827;color:#fff;transform:scale(1.06)}
-.dot.selected::after{content:attr(data-order);font-size:13px}
-.dot:not(.selected)::after{content:"";width:12px;height:12px;background:#9ca3af;border-radius:50%}
-.dot.selected span{display:none}
-#lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.gridwrap{position:relative;width:min(82vw,360px);margin:auto}
-button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;cursor:pointer;background:#111827;color:white}
-button.secondary{background:#e5e7eb;color:#111827}button.danger{background:#fee2e2;color:#991b1b}
-button:disabled{opacity:.45;cursor:not-allowed}
-.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.current{text-align:center;min-height:22px;font-size:14px;color:#4b5563}
-.history{max-height:360px;overflow:auto;margin-top:12px}
-.row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #eee;padding:11px 2px}
-.pattern{font-family:ui-monospace,monospace;font-size:15px}.time{font-size:11px;color:#9ca3af}
-.mini-pattern{width:88px;height:88px;flex:0 0 88px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;display:flex;align-items:center;justify-content:center;color:#16a34a}
-.mini-pattern svg{display:block}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-.small{font-size:12px;color:#6b7280}
-input[type=file]{display:none}
-.filebtn{display:inline-block;background:#e5e7eb;color:#111827;padding:11px 14px;border-radius:12px;font-weight:700;cursor:pointer}
-footer{text-align:center;color:#9ca3af;font-size:12px;padding:8px}
-</style>
+    <title>Pattern Generator - No Circle</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        .pattern-box {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .pattern-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,.4);
+        }
+    </style>
 </head>
-<body>
-<div class="wrap">
-  <div class="card">
-    <h1>Pattern Trial Tracker</h1>
-    <div class="sub">Draw/select a pattern yourself, then mark it as tried. History is stored locally in this browser.</div>
 
-    <div class="stats">
-      <div class="stat"><b id="count">0</b><span>Tried patterns</span></div>
-      <div class="stat"><b id="current">0</b><span>Dots selected</span></div>
-      <div class="stat"><b id="sessions">0</b><span>Saved entries</span></div>
+<body class="min-h-screen flex flex-col">
+
+<header class="bg-slate-900 border-b border-slate-800 p-6 shadow-md sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+
+        <div>
+            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-500">
+                Pattern Generator
+            </h1>
+
+            <p class="text-slate-400 text-sm mt-1">
+                A4 • 35mm Cards • 5×6 • No Circle
+            </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center gap-4">
+
+            <div class="flex items-center gap-2 bg-slate-800 p-2 rounded-lg border border-slate-700">
+
+                <label for="dotCount" class="text-sm font-medium text-slate-300">
+                    Dots:
+                </label>
+
+                <select
+                    id="dotCount"
+                    class="bg-slate-900 border border-slate-700 text-white text-sm rounded-md p-2 outline-none cursor-pointer"
+                >
+                    <option value="4" selected>4 Dots</option>
+                    <option value="5">5 Dots</option>
+                    <option value="6">6 Dots</option>
+                    <option value="7">7 Dots</option>
+                    <option value="8">8 Dots</option>
+                    <option value="9">9 Dots</option>
+                </select>
+            </div>
+
+            <button
+                id="generateBtn"
+                class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-medium rounded-lg text-sm shadow-lg"
+            >
+                Generate Patterns
+            </button>
+
+            <button
+                id="downloadBtn"
+                disabled
+                class="px-5 py-2.5 bg-slate-800 text-slate-500 border border-slate-700 font-medium rounded-lg text-sm cursor-not-allowed"
+            >
+                Download PDF
+            </button>
+
+        </div>
+    </div>
+</header>
+
+
+<main class="flex-grow p-6 max-w-6xl mx-auto w-full">
+
+    <div id="statusArea" class="mb-6 border-b border-slate-800 pb-4 hidden">
+
+        <h2 class="text-xl font-semibold text-white">
+            Generation Results
+        </h2>
+
+        <p id="statsText" class="text-slate-400 text-sm mt-1">
+            Found 0 patterns.
+        </p>
+
     </div>
 
-    <div class="gridwrap">
-      <div id="grid" class="grid"></div>
-    </div>
-    <div class="current" id="preview">Select dots in order.</div>
+    <div
+        id="patternGrid"
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 pb-12"
+    ></div>
 
-    <div class="actions" style="margin-top:12px">
-      <button id="add">Add to Tried</button>
-      <button id="undo" class="secondary">Undo</button>
-      <button id="clearCurrent" class="secondary">Clear</button>
-    </div>
-  </div>
+    <div id="emptyState" class="text-center mt-32 opacity-50">
 
-  <div class="card">
-    <h2 style="font-size:18px;margin:0">History</h2>
-    <div class="small">The list below survives refreshes and browser restarts unless site data is cleared.</div>
-    <div id="history" class="history"></div>
-    <div class="actions" style="margin-top:14px">
-      <button id="export" class="secondary">Export Backup</button>
-      <label class="filebtn">Import Backup<input id="import" type="file" accept=".json,application/json"></label>
-      <button id="clearHistory" class="danger">Clear History</button>
-    </div>
-  </div>
+        <h2 class="text-xl font-medium text-slate-400">
+            Ready to Generate
+        </h2>
 
-  <footer>Manual tracker only • No automatic pattern generation or phone interaction</footer>
+        <p class="text-slate-500 text-sm mt-2">
+            Select dots and click Generate Patterns.
+        </p>
+
+    </div>
+
+</main>
+
+
+<div
+    id="progressOverlay"
+    class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center"
+>
+
+    <div class="bg-slate-900 border border-slate-700 rounded-xl p-8 max-w-md w-full text-center">
+
+        <h3 class="text-xl font-bold text-white mb-2">
+            Generating PDF
+        </h3>
+
+        <p
+            id="progressDesc"
+            class="text-slate-400 text-sm mb-6"
+        >
+            Drawing A4 pattern cards...
+        </p>
+
+        <div class="w-full bg-slate-800 rounded-full h-2.5">
+
+            <div
+                id="progressBar"
+                class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-2.5 rounded-full"
+                style="width:0%"
+            ></div>
+
+        </div>
+
+        <p
+            id="progressPercent"
+            class="text-xs text-slate-500 mt-2"
+        >
+            0%
+        </p>
+
+    </div>
 </div>
 
+
 <script>
-const KEY="manualPatternTrialHistory.v1";
-let selected=[];
-let history=load();
 
-function load(){
-  try{
-    const x=JSON.parse(localStorage.getItem(KEY)||"[]");
-    return Array.isArray(x)?x:[];
-  }catch{return []}
-}
-function save(){localStorage.setItem(KEY,JSON.stringify(history));render()}
-function key(){return selected.join("-")}
-function makeGrid(){
-  const g=document.getElementById("grid");
-  for(let i=1;i<=9;i++){
-    const d=document.createElement("div");
-    d.className="dot"; d.dataset.n=i; d.dataset.order=""; d.setAttribute("aria-label","Dot "+i);
-    d.addEventListener("pointerdown",e=>{e.preventDefault();select(i)});
-    d.addEventListener("pointerenter",e=>{if(e.buttons)select(i)});
-    g.appendChild(d);
-  }
-}
-function select(n){
-  if(selected.includes(n)) return;
-  selected.push(n);
-  const d=document.querySelector(`.dot[data-n="${n}"]`);
-  d.classList.add("selected"); d.dataset.order=selected.length;
-  document.getElementById("current").textContent=selected.length;
-  document.getElementById("preview").textContent="Pattern: "+selected.join(" → ");
-}
-function clearCurrent(){
-  selected=[];
-  document.querySelectorAll(".dot").forEach(d=>{d.classList.remove("selected");d.dataset.order=""});
-  document.getElementById("current").textContent="0";
-  document.getElementById("preview").textContent="Select dots in order.";
-}
-document.getElementById("add").onclick=()=>{
-  if(selected.length<4){alert("Select at least 4 dots.");return}
-  const k=key();
-  if(history.some(x=>x.pattern===k)){alert("This pattern is already in your history.");return}
-  history.unshift({pattern:k,at:new Date().toISOString()});
-  save(); clearCurrent();
-};
-document.getElementById("undo").onclick=()=>{
-  if(!selected.length)return;
-  selected.pop();
-  document.querySelectorAll(".dot").forEach(d=>{
-    const n=+d.dataset.n, pos=selected.indexOf(n);
-    d.classList.toggle("selected",pos>=0);
-    d.dataset.order=pos>=0?pos+1:"";
-  });
-  document.getElementById("current").textContent=selected.length;
-  document.getElementById("preview").textContent=selected.length?"Pattern: "+selected.join(" → "):"Select dots in order.";
-};
-document.getElementById("clearCurrent").onclick=clearCurrent;
+const PREVIEW_LIMIT = 100;
 
-function render(){
-  document.getElementById("count").textContent=history.length;
-  document.getElementById("sessions").textContent=history.length;
-  const h=document.getElementById("history"); h.innerHTML="";
-  if(!history.length){h.innerHTML='<div class="small" style="padding:16px 2px">No tried patterns saved yet.</div>';return}
-  history.forEach((x,i)=>{
-    const row=document.createElement("div");
-    row.className="row";
-    row.style.alignItems="center";
+let generatedSequences = [];
 
-    const left=document.createElement("div");
-    left.style.display="flex";
-    left.style.alignItems="center";
-    left.style.gap="12px";
-    left.style.minWidth="0";
 
-    const mini = document.createElement("div");
-    mini.className="mini-pattern";
-    mini.setAttribute("aria-label","Pattern "+x.pattern);
+/* =========================================================
+   BLOCKING MATRIX
+========================================================= */
 
-    const nums = x.pattern.split("-").map(Number);
-    const pos = {
-      1:[0,0],2:[1,0],3:[2,0],
-      4:[0,1],5:[1,1],6:[2,1],
-      7:[0,2],8:[1,2],9:[2,2]
-    };
+const blockMatrix =
+    Array.from(
+        { length: 9 },
+        () => Array(9).fill(-1)
+    );
 
-    const svgNS="http://www.w3.org/2000/svg";
-    const svg=document.createElementNS(svgNS,"svg");
-    svg.setAttribute("viewBox","0 0 90 90");
-    svg.setAttribute("width","82");
-    svg.setAttribute("height","82");
+blockMatrix[0][2] = 1;
+blockMatrix[2][0] = 1;
 
-    const pts=nums.map(n=>[15+pos[n][0]*30,15+pos[n][1]*30]);
+blockMatrix[3][5] = 4;
+blockMatrix[5][3] = 4;
 
-    for(let j=0;j<pts.length-1;j++){
-      const line=document.createElementNS(svgNS,"line");
-      line.setAttribute("x1",pts[j][0]); line.setAttribute("y1",pts[j][1]);
-      line.setAttribute("x2",pts[j+1][0]); line.setAttribute("y2",pts[j+1][1]);
-      line.setAttribute("stroke","#16a34a");
-      line.setAttribute("stroke-width","4");
-      line.setAttribute("stroke-linecap","round");
-      svg.appendChild(line);
+blockMatrix[6][8] = 7;
+blockMatrix[8][6] = 7;
+
+blockMatrix[0][6] = 3;
+blockMatrix[6][0] = 3;
+
+blockMatrix[1][7] = 4;
+blockMatrix[7][1] = 4;
+
+blockMatrix[2][8] = 5;
+blockMatrix[8][2] = 5;
+
+blockMatrix[0][8] = 4;
+blockMatrix[8][0] = 4;
+
+blockMatrix[2][6] = 4;
+blockMatrix[6][2] = 4;
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const generateBtn =
+    document.getElementById("generateBtn");
+
+const downloadBtn =
+    document.getElementById("downloadBtn");
+
+const dotCount =
+    document.getElementById("dotCount");
+
+const patternGrid =
+    document.getElementById("patternGrid");
+
+const statusArea =
+    document.getElementById("statusArea");
+
+const statsText =
+    document.getElementById("statsText");
+
+const emptyState =
+    document.getElementById("emptyState");
+
+const progressOverlay =
+    document.getElementById("progressOverlay");
+
+const progressBar =
+    document.getElementById("progressBar");
+
+const progressPercent =
+    document.getElementById("progressPercent");
+
+
+/* =========================================================
+   GENERATE PATTERNS
+========================================================= */
+
+function generatePatterns(length) {
+
+    const result = [];
+
+    function dfs(current, visited, path) {
+
+        if (path.length === length) {
+
+            result.push([...path]);
+
+            return;
+        }
+
+        for (let next = 0; next < 9; next++) {
+
+            if (visited[next]) {
+                continue;
+            }
+
+            const blocking =
+                blockMatrix[current][next];
+
+            if (
+                blocking === -1 ||
+                visited[blocking]
+            ) {
+
+                visited[next] = true;
+
+                path.push(next);
+
+                dfs(
+                    next,
+                    visited,
+                    path
+                );
+
+                path.pop();
+
+                visited[next] = false;
+            }
+        }
     }
 
-    for(let n=1;n<=9;n++){
-      const [cx,cy]=[15+pos[n][0]*30,15+pos[n][1]*30];
-      const c=document.createElementNS(svgNS,"circle");
-      c.setAttribute("cx",cx); c.setAttribute("cy",cy);
-      c.setAttribute("r",nums.includes(n)?"5":"3.5");
-      c.setAttribute("fill",nums.includes(n)?"#16a34a":"#9ca3af");
-      svg.appendChild(c);
+    for (let start = 0; start < 9; start++) {
 
-      if(nums.includes(n)){
-        const order = nums.indexOf(n)+1;
-        const t=document.createElementNS(svgNS,"text");
-        t.setAttribute("x",cx); t.setAttribute("y",cy+3);
-        t.setAttribute("text-anchor","middle");
-        t.setAttribute("font-size","7");
-        t.setAttribute("font-weight","700");
-        t.setAttribute("fill","#fff");
-        t.textContent=order;
-        svg.appendChild(t);
-      }
+        const visited =
+            new Array(9).fill(false);
+
+        visited[start] = true;
+
+        dfs(
+            start,
+            visited,
+            [start]
+        );
     }
 
-    mini.appendChild(svg);
-
-    const info=document.createElement("div");
-    info.innerHTML=`<div class="pattern">#${history.length-i} &nbsp; ${escapeHtml(x.pattern.replaceAll("-"," → "))}</div><div class="time">${new Date(x.at).toLocaleString()}</div>`;
-    left.append(mini,info);
-
-    const b=document.createElement("button");
-    b.textContent="Remove"; b.className="secondary";
-    b.onclick=()=>{history.splice(i,1);save()};
-    row.append(left,b); h.append(row);
-  });
+    return result;
 }
-function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 
-document.getElementById("clearHistory").onclick=()=>{
-  if(confirm("Delete all saved history from this browser?")){history=[];save()}
-};
-document.getElementById("export").onclick=()=>{
-  const blob=new Blob([JSON.stringify({app:"Pattern Trial Tracker",version:1,history},null,2)],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="pattern-trial-history.json";a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-};
-document.getElementById("import").onchange=e=>{
-  const f=e.target.files[0]; if(!f)return;
-  const r=new FileReader();
-  r.onload=()=>{
-    try{
-      const data=JSON.parse(r.result);
-      const incoming=Array.isArray(data)?data:data.history;
-      if(!Array.isArray(incoming))throw Error();
-      const map=new Map(history.map(x=>[x.pattern,x]));
-      incoming.forEach(x=>{if(x&&x.pattern)map.set(x.pattern,{pattern:x.pattern,at:x.at||new Date().toISOString()})});
-      history=[...map.values()].sort((a,b)=>new Date(b.at)-new Date(a.at));
-      save(); alert("Backup imported.");
-    }catch{alert("Invalid backup file.")}
-  };
-  r.readAsText(f); e.target.value="";
-};
-makeGrid();render();
+
+/* =========================================================
+   PREVIEW
+========================================================= */
+
+function createSVG(sequence) {
+
+    const points = [
+        [25,35],[50,35],[75,35],
+        [25,60],[50,60],[75,60],
+        [25,85],[50,85],[75,85]
+    ];
+
+    let svg = `
+        <svg
+            viewBox="0 0 100 100"
+            class="w-full h-full"
+        >
+    `;
+
+    for (let i = 0; i < 9; i++) {
+
+        svg += `
+            <circle
+                cx="${points[i][0]}"
+                cy="${points[i][1]}"
+                r="3"
+                fill="#475569"
+            />
+        `;
+    }
+
+    let path = `
+        M
+        ${points[sequence[0]][0]}
+        ${points[sequence[0]][1]}
+    `;
+
+    for (let i = 1; i < sequence.length; i++) {
+
+        path += `
+            L
+            ${points[sequence[i]][0]}
+            ${points[sequence[i]][1]}
+        `;
+    }
+
+    svg += `
+        <path
+            d="${path}"
+            fill="none"
+            stroke="#0ea5e9"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        />
+    `;
+
+    for (let i = 1; i < sequence.length; i++) {
+
+        const p =
+            points[sequence[i]];
+
+        svg += `
+            <circle
+                cx="${p[0]}"
+                cy="${p[1]}"
+                r="4.5"
+                fill="#38bdf8"
+            />
+        `;
+    }
+
+    const start =
+        points[sequence[0]];
+
+    svg += `
+        <circle
+            cx="${start[0]}"
+            cy="${start[1]}"
+            r="5.5"
+            fill="#ef4444"
+        />
+    `;
+
+    return svg + "</svg>";
+}
+
+
+function showPreview() {
+
+    patternGrid.innerHTML = "";
+
+    const limit =
+        Math.min(
+            generatedSequences.length,
+            PREVIEW_LIMIT
+        );
+
+    for (let i = 0; i < limit; i++) {
+
+        const card =
+            document.createElement("div");
+
+        card.className =
+            "pattern-box bg-[#1e293b] rounded-xl aspect-square relative overflow-hidden border border-slate-700/50";
+
+        card.innerHTML =
+            createSVG(
+                generatedSequences[i]
+            );
+
+        const number =
+            document.createElement("span");
+
+        number.className =
+            "absolute top-3 left-3 text-xs text-[#22c55e] font-mono font-bold";
+
+        number.textContent =
+            `#${i + 1}`;
+
+        card.appendChild(number);
+
+        patternGrid.appendChild(card);
+    }
+}
+
+
+/* =========================================================
+   GENERATE
+========================================================= */
+
+generateBtn.addEventListener(
+    "click",
+    () => {
+
+        const count =
+            Number(dotCount.value);
+
+        emptyState.style.display =
+            "none";
+
+        statusArea.classList.remove(
+            "hidden"
+        );
+
+        statsText.textContent =
+            "Calculating patterns...";
+
+        generateBtn.disabled = true;
+
+        setTimeout(() => {
+
+            const start =
+                performance.now();
+
+            generatedSequences =
+                generatePatterns(count);
+
+            const time =
+                performance.now() - start;
+
+            statsText.innerHTML =
+                `
+                Found
+                <strong class="text-white">
+                    ${generatedSequences.length.toLocaleString()}
+                </strong>
+                valid patterns in
+                ${time.toFixed(2)}ms.
+                `;
+
+            showPreview();
+
+            generateBtn.disabled =
+                false;
+
+            downloadBtn.disabled =
+                false;
+
+            downloadBtn.className =
+                `
+                px-5 py-2.5
+                bg-gradient-to-r
+                from-emerald-600 to-teal-600
+                text-white font-medium
+                rounded-lg text-sm
+                cursor-pointer
+                `;
+
+        }, 50);
+    }
+);
+
+
+/* =========================================================
+   PDF
+========================================================= */
+
+downloadBtn.addEventListener(
+    "click",
+    async () => {
+
+        if (!generatedSequences.length) {
+            return;
+        }
+
+        progressOverlay.classList.remove(
+            "hidden"
+        );
+
+        progressOverlay.classList.add(
+            "flex"
+        );
+
+        progressBar.style.width =
+            "0%";
+
+        progressPercent.textContent =
+            "0%";
+
+        await new Promise(
+            r => setTimeout(r, 100)
+        );
+
+
+        try {
+
+            const {
+                jsPDF
+            } = window.jspdf;
+
+
+            /* =========================================
+               PAGE
+            ========================================= */
+
+            const pageWidth = 210;
+            const pageHeight = 297;
+
+
+            /* =========================================
+               LAYOUT
+            ========================================= */
+
+            const columns = 5;
+            const rows = 6;
+
+            const cardSize = 35;
+
+            const horizontalGap = 5;
+
+            const verticalGap = 13.5;
+
+            const leftMargin = 7.5;
+
+            const topMargin = 3;
+
+            const itemsPerPage =
+                columns * rows;
+
+
+            /* =========================================
+               COLORS
+            ========================================= */
+
+            const PAGE_BG =
+                [15, 23, 42];
+
+            const CARD_BG =
+                [30, 41, 59];
+
+            const NUMBER =
+                [34, 197, 94];
+
+            const LINE =
+                [14, 165, 233];
+
+            const SELECTED =
+                [56, 189, 248];
+
+            const START =
+                [239, 68, 68];
+
+            const BASE =
+                [71, 85, 105];
+
+
+            /* =========================================
+               PDF
+            ========================================= */
+
+            const doc =
+                new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "a4",
+                    compress: true
+                });
+
+
+            function paintPage() {
+
+                doc.setFillColor(
+                    ...PAGE_BG
+                );
+
+                doc.rect(
+                    0,
+                    0,
+                    pageWidth,
+                    pageHeight,
+                    "F"
+                );
+            }
+
+
+            /* =========================================
+               CARD
+            ========================================= */
+
+            function drawCard(
+                sequence,
+                number,
+                x,
+                y
+            ) {
+
+                doc.setFillColor(
+                    ...CARD_BG
+                );
+
+                doc.roundedRect(
+                    x,
+                    y,
+                    cardSize,
+                    cardSize,
+                    2.2,
+                    2.2,
+                    "F"
+                );
+
+
+                /* Number */
+
+                doc.setFont(
+                    "helvetica",
+                    "bold"
+                );
+
+                doc.setFontSize(
+                    5.5
+                );
+
+                doc.setTextColor(
+                    ...NUMBER
+                );
+
+                doc.text(
+                    `#${number}`,
+                    x + 2.5,
+                    y + 4.5
+                );
+
+
+                /* Grid */
+
+                const spacing = 9.5;
+
+                const offset =
+                    (
+                        cardSize -
+                        spacing * 2
+                    ) / 2;
+
+                const points = [];
+
+
+                for (
+                    let row = 0;
+                    row < 3;
+                    row++
+                ) {
+
+                    for (
+                        let col = 0;
+                        col < 3;
+                        col++
+                    ) {
+
+                        points.push([
+                            x +
+                            offset +
+                            col * spacing,
+
+                            y +
+                            offset +
+                            row * spacing
+                        ]);
+                    }
+                }
+
+
+                /* Base dots */
+
+                doc.setFillColor(
+                    ...BASE
+                );
+
+                for (let i = 0; i < 9; i++) {
+
+                    doc.circle(
+                        points[i][0],
+                        points[i][1],
+                        1.15,
+                        "F"
+                    );
+                }
+
+
+                /* Lines */
+
+                doc.setDrawColor(
+                    ...LINE
+                );
+
+                doc.setLineWidth(
+                    0.9
+                );
+
+                doc.setLineCap(
+                    "round"
+                );
+
+                doc.setLineJoin(
+                    "round"
+                );
+
+
+                for (
+                    let i = 0;
+                    i < sequence.length - 1;
+                    i++
+                ) {
+
+                    const a =
+                        points[
+                            sequence[i]
+                        ];
+
+                    const b =
+                        points[
+                            sequence[i + 1]
+                        ];
+
+                    doc.line(
+                        a[0],
+                        a[1],
+                        b[0],
+                        b[1]
+                    );
+                }
+
+
+                /* Selected dots */
+
+                doc.setFillColor(
+                    ...SELECTED
+                );
+
+                for (
+                    let i = 1;
+                    i < sequence.length;
+                    i++
+                ) {
+
+                    const p =
+                        points[
+                            sequence[i]
+                        ];
+
+                    doc.circle(
+                        p[0],
+                        p[1],
+                        1.55,
+                        "F"
+                    );
+                }
+
+
+                /* Start dot */
+
+                const start =
+                    points[
+                        sequence[0]
+                    ];
+
+                doc.setFillColor(
+                    ...START
+                );
+
+                doc.circle(
+                    start[0],
+                    start[1],
+                    1.9,
+                    "F"
+                );
+            }
+
+
+            /* First page */
+
+            paintPage();
+
+
+            /* =========================================
+               DRAW PATTERNS
+            ========================================= */
+
+            for (
+                let i = 0;
+                i < generatedSequences.length;
+                i++
+            ) {
+
+                if (
+                    i > 0 &&
+                    i % itemsPerPage === 0
+                ) {
+
+                    doc.addPage(
+                        "a4",
+                        "portrait"
+                    );
+
+                    paintPage();
+                }
+
+
+                const local =
+                    i % itemsPerPage;
+
+                const row =
+                    Math.floor(
+                        local / columns
+                    );
+
+                const col =
+                    local % columns;
+
+
+                const x =
+                    leftMargin +
+                    col *
+                    (
+                        cardSize +
+                        horizontalGap
+                    );
+
+
+                const y =
+                    topMargin +
+                    row *
+                    (
+                        cardSize +
+                        verticalGap
+                    );
+
+
+                drawCard(
+                    generatedSequences[i],
+                    i + 1,
+                    x,
+                    y
+                );
+
+
+                if (
+                    i % 100 === 0 ||
+                    i ===
+                    generatedSequences.length - 1
+                ) {
+
+                    const percent =
+                        Math.round(
+                            (
+                                (i + 1) /
+                                generatedSequences.length
+                            ) * 100
+                        );
+
+                    progressBar.style.width =
+                        `${percent}%`;
+
+                    progressPercent.textContent =
+                        `${percent}%`;
+
+                    await new Promise(
+                        r => setTimeout(r, 0)
+                    );
+                }
+            }
+
+
+            /* Save */
+
+            const dots =
+                dotCount.value;
+
+            doc.save(
+                `A4-Pattern-Layout-${dots}Dots-No-Circle.pdf`
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "PDF Error:",
+                error
+            );
+
+            alert(
+                "PDF generation failed. Check console."
+            );
+
+        } finally {
+
+            progressOverlay.classList.add(
+                "hidden"
+            );
+
+            progressOverlay.classList.remove(
+                "flex"
+            );
+        }
+    }
+);
+
 </script>
+
 </body>
 </html>
