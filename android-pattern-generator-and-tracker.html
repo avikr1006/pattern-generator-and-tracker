@@ -1,0 +1,3282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Android Pattern Generator</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- jsPDF -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.2.5.1.min.js"
+  ></script>
+
+  <!-- Inter Font -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: "Inter", sans-serif;
+    }
+
+    button,
+    input {
+      font-family: inherit;
+    }
+
+    /* =========================================================
+       PREVIEW
+    ========================================================== */
+
+    #previewWrapper {
+      position: relative;
+      width: 100%;
+      height: 75vh;
+      min-height: 500px;
+
+      overflow: auto;
+
+      background: #0b1220;
+
+      border: 1px solid #334155;
+      border-radius: 16px;
+
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    #virtualSpace {
+      position: relative;
+      width: 100%;
+    }
+
+    /*
+      Canvas remains viewport-sized.
+      It is moved according to scroll position.
+    */
+
+    #patternCanvas {
+      position: absolute;
+
+      left: 0;
+      top: 0;
+
+      display: block;
+
+      pointer-events: auto;
+
+      touch-action: manipulation;
+    }
+
+    #previewWrapper::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    #previewWrapper::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+
+    #previewWrapper::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 999px;
+      border: 3px solid #0f172a;
+    }
+
+    #previewWrapper::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* =========================================================
+       STATS
+    ========================================================== */
+
+    .stat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    /* =========================================================
+       PROGRESS
+    ========================================================== */
+
+    #progressOverlay {
+      display: none;
+    }
+
+    #progressOverlay.show {
+      display: flex;
+    }
+
+    /* =========================================================
+       FILE INPUT
+    ========================================================== */
+
+    #jsonFileInput {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =========================================================
+       HEADER
+  ========================================================== -->
+
+  <header class="border-b border-slate-700 bg-slate-900/95">
+
+    <div
+      class="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8"
+    >
+
+      <div
+        class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+      >
+
+        <div>
+
+          <h1
+            class="text-2xl font-extrabold tracking-tight text-white"
+          >
+            Android Pattern Generator
+          </h1>
+
+          <p class="mt-1 text-sm text-slate-400">
+            Generate valid Android-style 3×3 lock patterns
+          </p>
+
+        </div>
+
+
+        <div class="flex flex-wrap items-center gap-2">
+
+          <span class="text-sm font-medium text-slate-400">
+            Pattern length:
+          </span>
+
+
+          <div
+            id="dotSelector"
+            class="flex rounded-lg border border-slate-700 bg-slate-800 p-1"
+          ></div>
+
+
+          <button
+            id="generateBtn"
+            type="button"
+            class="rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Generate Patterns
+          </button>
+
+
+          <button
+            id="downloadPdfBtn"
+            type="button"
+            disabled
+            class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Download PDF
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </header>
+
+
+  <!-- =========================================================
+       MAIN
+  ========================================================== -->
+
+  <main
+    class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
+  >
+
+    <!-- =======================================================
+         STATUS
+    ======================================================== -->
+
+    <section
+      class="mb-5 rounded-xl border border-slate-700 bg-slate-800/70 p-4"
+    >
+
+      <div
+        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      >
+
+        <div>
+
+          <div
+            id="statusText"
+            class="font-semibold text-white"
+          >
+            Select pattern length and generate patterns.
+          </div>
+
+          <div
+            id="statusSubtext"
+            class="mt-1 text-sm text-slate-400"
+          >
+            All generated patterns will remain available in the browser.
+          </div>
+
+        </div>
+
+
+        <div
+          id="generationCount"
+          class="text-sm font-semibold text-cyan-400"
+        >
+          0 patterns
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =======================================================
+         STATS
+    ======================================================== -->
+
+    <section class="mb-6">
+
+      <div
+        class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      >
+
+        <div class="stat-card">
+
+          <div
+            class="text-xs font-medium uppercase tracking-wide text-slate-400"
+          >
+            Generated
+          </div>
+
+          <div
+            id="generatedStat"
+            class="mt-1 text-3xl font-bold text-white"
+          >
+            0
+          </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+          <div
+            class="text-xs font-medium uppercase tracking-wide text-slate-400"
+          >
+            Tried
+          </div>
+
+          <div
+            id="triedStat"
+            class="mt-1 text-3xl font-bold text-emerald-400"
+          >
+            0
+          </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+          <div
+            class="text-xs font-medium uppercase tracking-wide text-slate-400"
+          >
+            Remaining
+          </div>
+
+          <div
+            id="remainingStat"
+            class="mt-1 text-3xl font-bold text-cyan-400"
+          >
+            0
+          </div>
+
+        </div>
+
+
+        <div
+          class="stat-card flex flex-wrap items-center justify-center gap-2"
+        >
+
+          <button
+            id="exportHistoryBtn"
+            type="button"
+            class="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-600"
+          >
+            Export JSON
+          </button>
+
+
+          <button
+            id="importHistoryBtn"
+            type="button"
+            class="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-600"
+          >
+            Import JSON
+          </button>
+
+
+          <button
+            id="clearHistoryBtn"
+            type="button"
+            class="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-500"
+          >
+            Clear History
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =======================================================
+         HISTORY MESSAGE
+    ======================================================== -->
+
+    <div
+      id="historyInfo"
+      class="mb-5 hidden rounded-xl border border-emerald-900/70 bg-emerald-950/30 p-4 text-sm text-emerald-300"
+    ></div>
+
+
+    <!-- =======================================================
+         PREVIEW
+    ======================================================== -->
+
+    <section>
+
+      <div
+        class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"
+      >
+
+        <div>
+
+          <h2 class="text-lg font-bold text-white">
+            Pattern Preview
+          </h2>
+
+          <p class="mt-1 text-sm text-slate-400">
+            Tap the white circle below a pattern to mark it as Tried.
+          </p>
+
+        </div>
+
+
+        <div class="text-xs text-slate-500">
+          Tried history is saved automatically in this browser.
+        </div>
+
+      </div>
+
+
+      <!-- Empty State -->
+
+      <div
+        id="emptyState"
+        class="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 px-6 py-20 text-center"
+      >
+
+        <div class="text-lg font-semibold text-slate-300">
+          No patterns generated yet.
+        </div>
+
+        <div class="mt-2 text-sm text-slate-500">
+          Choose a pattern length above and click Generate Patterns.
+        </div>
+
+      </div>
+
+
+      <!-- Virtual Preview -->
+
+      <div
+        id="previewWrapper"
+        class="hidden"
+      >
+
+        <div id="virtualSpace">
+
+          <canvas
+            id="patternCanvas"
+          ></canvas>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- =========================================================
+       PDF PROGRESS
+  ========================================================== -->
+
+  <div
+    id="progressOverlay"
+    class="fixed inset-0 z-50 items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+  >
+
+    <div
+      class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+    >
+
+      <div class="text-lg font-bold text-white">
+        Creating PDF
+      </div>
+
+      <div
+        id="pdfProgressText"
+        class="mt-2 text-sm text-slate-400"
+      >
+        Preparing...
+      </div>
+
+      <div
+        class="mt-5 h-2 overflow-hidden rounded-full bg-slate-700"
+      >
+
+        <div
+          id="pdfProgressBar"
+          class="h-full w-0 rounded-full bg-cyan-500 transition-all"
+        ></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================================================
+       JSON INPUT
+  ========================================================== -->
+
+  <input
+    id="jsonFileInput"
+    type="file"
+    accept=".json,application/json"
+  />
+
+
+  <script>
+
+    /* =========================================================
+       CONFIGURATION
+    ========================================================== */
+
+    const STORAGE_KEY =
+      "androidPatternTriedHistory_v2";
+
+
+    /* =========================================================
+       PDF LAYOUT
+    ========================================================== */
+
+    const PAGE_WIDTH = 210;
+    const PAGE_HEIGHT = 297;
+
+    const CARD_SIZE = 35;
+
+    const HORIZONTAL_GAP = 5;
+    const VERTICAL_GAP = 13.5;
+
+    const LEFT_MARGIN = 7.5;
+    const TOP_MARGIN = 3;
+
+    const COLUMNS = 5;
+    const ROWS = 6;
+
+    const ITEMS_PER_PAGE =
+      COLUMNS * ROWS;
+
+
+    /* =========================================================
+       BROWSER PREVIEW LAYOUT
+    ========================================================== */
+
+    /*
+      IMPORTANT:
+
+      This is the gap between the bottom of the
+      pattern card and the next pattern row.
+
+      Increased from 55px → 75px so that:
+
+      Pattern
+          ↓
+        Circle
+        Tried
+          ↓
+      Next Pattern
+
+      does not overlap.
+    */
+
+    const PREVIEW_VERTICAL_GAP = 75;
+
+    const PREVIEW_SIDE_PADDING = 20;
+
+    const PREVIEW_HORIZONTAL_GAP = 20;
+
+    const MIN_CARD_SIZE = 135;
+
+    const MAX_CARD_SIZE = 190;
+
+
+    /* =========================================================
+       DOM REFERENCES
+    ========================================================== */
+
+    const dotSelector =
+      document.getElementById(
+        "dotSelector"
+      );
+
+    const generateBtn =
+      document.getElementById(
+        "generateBtn"
+      );
+
+    const downloadPdfBtn =
+      document.getElementById(
+        "downloadPdfBtn"
+      );
+
+    const statusText =
+      document.getElementById(
+        "statusText"
+      );
+
+    const statusSubtext =
+      document.getElementById(
+        "statusSubtext"
+      );
+
+    const generationCount =
+      document.getElementById(
+        "generationCount"
+      );
+
+    const generatedStat =
+      document.getElementById(
+        "generatedStat"
+      );
+
+    const triedStat =
+      document.getElementById(
+        "triedStat"
+      );
+
+    const remainingStat =
+      document.getElementById(
+        "remainingStat"
+      );
+
+    const historyInfo =
+      document.getElementById(
+        "historyInfo"
+      );
+
+    const clearHistoryBtn =
+      document.getElementById(
+        "clearHistoryBtn"
+      );
+
+    const exportHistoryBtn =
+      document.getElementById(
+        "exportHistoryBtn"
+      );
+
+    const importHistoryBtn =
+      document.getElementById(
+        "importHistoryBtn"
+      );
+
+    const jsonFileInput =
+      document.getElementById(
+        "jsonFileInput"
+      );
+
+    const emptyState =
+      document.getElementById(
+        "emptyState"
+      );
+
+    const previewWrapper =
+      document.getElementById(
+        "previewWrapper"
+      );
+
+    const virtualSpace =
+      document.getElementById(
+        "virtualSpace"
+      );
+
+    const canvas =
+      document.getElementById(
+        "patternCanvas"
+      );
+
+    const ctx =
+      canvas.getContext(
+        "2d"
+      );
+
+    const progressOverlay =
+      document.getElementById(
+        "progressOverlay"
+      );
+
+    const pdfProgressText =
+      document.getElementById(
+        "pdfProgressText"
+      );
+
+    const pdfProgressBar =
+      document.getElementById(
+        "pdfProgressBar"
+      );
+
+
+    /* =========================================================
+       STATE
+    ========================================================== */
+
+    let selectedLength = 4;
+
+    let generatedSequences = [];
+
+    let triedPatterns =
+      loadHistory();
+
+    let previewLayout = null;
+
+    let drawFrame = null;
+
+    let resizeTimer = null;
+
+
+    /* =========================================================
+       ANDROID LOCK PATTERN RULES
+    ========================================================== */
+
+    const blocking =
+      Array.from(
+        { length: 9 },
+        () => Array(9).fill(-1)
+      );
+
+
+    function addBlocking(
+      a,
+      b,
+      middle
+    ) {
+
+      blocking[a][b] =
+        middle;
+
+      blocking[b][a] =
+        middle;
+    }
+
+
+    addBlocking(0, 2, 1);
+    addBlocking(3, 5, 4);
+    addBlocking(6, 8, 7);
+
+    addBlocking(0, 6, 3);
+    addBlocking(1, 7, 4);
+    addBlocking(2, 8, 5);
+
+    addBlocking(0, 8, 4);
+    addBlocking(2, 6, 4);
+
+
+    /* =========================================================
+       DOT SELECTOR
+    ========================================================== */
+
+    function buildDotSelector() {
+
+      dotSelector.innerHTML = "";
+
+      for (
+        let length = 4;
+        length <= 9;
+        length++
+      ) {
+
+        const button =
+          document.createElement(
+            "button"
+          );
+
+        button.type =
+          "button";
+
+        button.textContent =
+          length;
+
+        button.dataset.length =
+          String(length);
+
+        button.className =
+          "min-w-9 rounded-md px-2 py-1.5 text-sm font-semibold transition";
+
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            selectedLength =
+              length;
+
+            updateDotSelector();
+
+          }
+        );
+
+
+        dotSelector.appendChild(
+          button
+        );
+      }
+
+
+      updateDotSelector();
+    }
+
+
+    function updateDotSelector() {
+
+      Array.from(
+        dotSelector.children
+      ).forEach(
+        button => {
+
+          const selected =
+            Number(
+              button.dataset.length
+            ) === selectedLength;
+
+
+          button.classList.toggle(
+            "bg-cyan-600",
+            selected
+          );
+
+          button.classList.toggle(
+            "text-white",
+            selected
+          );
+
+          button.classList.toggle(
+            "text-slate-400",
+            !selected
+          );
+
+          button.classList.toggle(
+            "hover:bg-slate-700",
+            !selected
+          );
+
+        }
+      );
+    }
+
+
+    /* =========================================================
+       PATTERN GENERATOR
+    ========================================================== */
+
+    function canMove(
+      from,
+      to,
+      visited
+    ) {
+
+      if (
+        visited[to]
+      ) {
+        return false;
+      }
+
+
+      const middle =
+        blocking[from][to];
+
+
+      if (
+        middle === -1
+      ) {
+        return true;
+      }
+
+
+      return visited[middle];
+    }
+
+
+    function generatePatterns(
+      length
+    ) {
+
+      const result = [];
+
+      const visited =
+        Array(9).fill(false);
+
+      const path = [];
+
+
+      function dfs(
+        current
+      ) {
+
+        path.push(
+          current
+        );
+
+        visited[current] =
+          true;
+
+
+        if (
+          path.length ===
+          length
+        ) {
+
+          result.push(
+            [...path]
+          );
+
+        } else {
+
+          for (
+            let next = 0;
+            next < 9;
+            next++
+          ) {
+
+            if (
+              canMove(
+                current,
+                next,
+                visited
+              )
+            ) {
+
+              dfs(
+                next
+              );
+            }
+          }
+        }
+
+
+        visited[current] =
+          false;
+
+        path.pop();
+      }
+
+
+      for (
+        let start = 0;
+        start < 9;
+        start++
+      ) {
+
+        dfs(
+          start
+        );
+      }
+
+
+      return result;
+    }
+
+
+    /* =========================================================
+       PATTERN ID
+    ========================================================== */
+
+    function patternId(
+      sequence
+    ) {
+
+      return sequence.join(
+        "-"
+      );
+    }
+
+
+    /* =========================================================
+       LOCAL STORAGE
+    ========================================================== */
+
+    function loadHistory() {
+
+      try {
+
+        const raw =
+          localStorage.getItem(
+            STORAGE_KEY
+          );
+
+
+        if (
+          !raw
+        ) {
+
+          return new Set();
+        }
+
+
+        const parsed =
+          JSON.parse(
+            raw
+          );
+
+
+        if (
+          !Array.isArray(
+            parsed
+          )
+        ) {
+
+          return new Set();
+        }
+
+
+        return new Set(
+          parsed.filter(
+            value =>
+              typeof value ===
+              "string"
+          )
+        );
+
+      } catch (
+        error
+      ) {
+
+        console.error(
+          "History load error:",
+          error
+        );
+
+        return new Set();
+      }
+    }
+
+
+    function saveHistory() {
+
+      try {
+
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(
+            Array.from(
+              triedPatterns
+            )
+          )
+        );
+
+      } catch (
+        error
+      ) {
+
+        console.error(
+          "History save error:",
+          error
+        );
+
+        alert(
+          "Unable to save Tried history in this browser."
+        );
+      }
+    }
+
+
+    /* =========================================================
+       HISTORY STATS
+    ========================================================== */
+
+    function getVisibleTriedCount() {
+
+      let count = 0;
+
+
+      for (
+        let i = 0;
+        i <
+        generatedSequences.length;
+        i++
+      ) {
+
+        if (
+          triedPatterns.has(
+            patternId(
+              generatedSequences[i]
+            )
+          )
+        ) {
+
+          count++;
+        }
+      }
+
+
+      return count;
+    }
+
+
+    function updateHistoryStats() {
+
+      const generated =
+        generatedSequences.length;
+
+
+      const tried =
+        getVisibleTriedCount();
+
+
+      generatedStat.textContent =
+        generated.toLocaleString();
+
+
+      triedStat.textContent =
+        tried.toLocaleString();
+
+
+      remainingStat.textContent =
+        Math.max(
+          generated - tried,
+          0
+        ).toLocaleString();
+    }
+
+
+    function showHistoryMessage(
+      message
+    ) {
+
+      historyInfo.textContent =
+        message;
+
+      historyInfo.classList.remove(
+        "hidden"
+      );
+    }
+
+
+    /* =========================================================
+       TOGGLE TRIED
+    ========================================================== */
+
+    function toggleTried(
+      sequence
+    ) {
+
+      const id =
+        patternId(
+          sequence
+        );
+
+
+      if (
+        triedPatterns.has(
+          id
+        )
+      ) {
+
+        triedPatterns.delete(
+          id
+        );
+
+      } else {
+
+        triedPatterns.add(
+          id
+        );
+      }
+
+
+      saveHistory();
+
+      updateHistoryStats();
+
+
+      showHistoryMessage(
+        `${triedPatterns.size.toLocaleString()} pattern(s) are currently saved as Tried.`
+      );
+
+
+      requestPreviewDraw();
+    }
+
+
+    /* =========================================================
+       PREVIEW LAYOUT
+    ========================================================== */
+
+    function calculatePreviewLayout() {
+
+      if (
+        !generatedSequences.length
+      ) {
+        return;
+      }
+
+
+      const width =
+        previewWrapper.clientWidth;
+
+
+      if (
+        width <= 0
+      ) {
+        return;
+      }
+
+
+      const usableWidth =
+        Math.max(
+          width -
+            PREVIEW_SIDE_PADDING * 2,
+          280
+        );
+
+
+      let columns = 1;
+
+
+      if (
+        usableWidth >= 1100
+      ) {
+
+        columns = 5;
+
+      } else if (
+        usableWidth >= 850
+      ) {
+
+        columns = 4;
+
+      } else if (
+        usableWidth >= 620
+      ) {
+
+        columns = 3;
+
+      } else if (
+        usableWidth >= 360
+      ) {
+
+        columns = 2;
+      }
+
+
+      const gap =
+        PREVIEW_HORIZONTAL_GAP;
+
+
+      let cardSize =
+        (
+          usableWidth -
+          gap *
+            (columns - 1)
+        ) /
+        columns;
+
+
+      cardSize =
+        Math.max(
+          MIN_CARD_SIZE,
+          Math.min(
+            MAX_CARD_SIZE,
+            cardSize
+          )
+        );
+
+
+      const maxAllowed =
+        (
+          usableWidth -
+          gap *
+            (columns - 1)
+        ) /
+        columns;
+
+
+      cardSize =
+        Math.min(
+          cardSize,
+          maxAllowed
+        );
+
+
+      /*
+        IMPORTANT:
+
+        Vertical row height now uses
+        PREVIEW_VERTICAL_GAP = 75px.
+      */
+
+      const rowHeight =
+        cardSize +
+        PREVIEW_VERTICAL_GAP;
+
+
+      const rows =
+        Math.ceil(
+          generatedSequences.length /
+          columns
+        );
+
+
+      const totalHeight =
+        PREVIEW_SIDE_PADDING * 2 +
+        rows * rowHeight;
+
+
+      previewLayout = {
+
+        columns,
+
+        cardSize,
+
+        gap,
+
+        rowHeight,
+
+        padding:
+          PREVIEW_SIDE_PADDING,
+
+        totalHeight,
+
+        width
+
+      };
+
+
+      /*
+        Virtual scrolling area.
+      */
+
+      virtualSpace.style.height =
+        `${totalHeight}px`;
+
+
+      resizeCanvasToViewport();
+
+      requestPreviewDraw();
+    }
+
+
+    /* =========================================================
+       CANVAS SIZE
+    ========================================================== */
+
+    function resizeCanvasToViewport() {
+
+      if (
+        !previewLayout
+      ) {
+        return;
+      }
+
+
+      const width =
+        previewWrapper.clientWidth;
+
+
+      const height =
+        previewWrapper.clientHeight;
+
+
+      const dpr =
+        Math.min(
+          window.devicePixelRatio || 1,
+          2
+        );
+
+
+      canvas.width =
+        Math.max(
+          1,
+          Math.floor(
+            width * dpr
+          )
+        );
+
+
+      canvas.height =
+        Math.max(
+          1,
+          Math.floor(
+            height * dpr
+          )
+        );
+
+
+      canvas.style.width =
+        `${width}px`;
+
+
+      canvas.style.height =
+        `${height}px`;
+
+
+      ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+      );
+    }
+
+
+    /* =========================================================
+       ROUNDED RECT
+    ========================================================== */
+
+    function roundedRect(
+      context,
+      x,
+      y,
+      width,
+      height,
+      radius
+    ) {
+
+      const r =
+        Math.min(
+          radius,
+          width / 2,
+          height / 2
+        );
+
+
+      context.beginPath();
+
+      context.moveTo(
+        x + r,
+        y
+      );
+
+
+      context.arcTo(
+        x + width,
+        y,
+        x + width,
+        y + height,
+        r
+      );
+
+
+      context.arcTo(
+        x + width,
+        y + height,
+        x,
+        y + height,
+        r
+      );
+
+
+      context.arcTo(
+        x,
+        y + height,
+        x,
+        y,
+        r
+      );
+
+
+      context.arcTo(
+        x,
+        y,
+        x + width,
+        y,
+        r
+      );
+
+
+      context.closePath();
+    }
+
+
+    /* =========================================================
+       PATTERN POINTS
+    ========================================================== */
+
+    function getPreviewPoints(
+      x,
+      y,
+      size
+    ) {
+
+      const spacing =
+        size * 0.235;
+
+
+      const offset =
+        (
+          size -
+          spacing * 2
+        ) /
+        2;
+
+
+      return [
+
+        [
+          x + offset,
+          y + offset
+        ],
+
+        [
+          x + offset + spacing,
+          y + offset
+        ],
+
+        [
+          x + offset + spacing * 2,
+          y + offset
+        ],
+
+
+        [
+          x + offset,
+          y + offset + spacing
+        ],
+
+        [
+          x + offset + spacing,
+          y + offset + spacing
+        ],
+
+        [
+          x + offset + spacing * 2,
+          y + offset + spacing
+        ],
+
+
+        [
+          x + offset,
+          y + offset + spacing * 2
+        ],
+
+        [
+          x + offset + spacing,
+          y + offset + spacing * 2
+        ],
+
+        [
+          x + offset + spacing * 2,
+          y + offset + spacing * 2
+        ]
+
+      ];
+    }
+
+
+    /* =========================================================
+       DRAW ONE PATTERN
+    ========================================================== */
+
+    function drawPattern(
+      sequence,
+      index,
+      x,
+      y,
+      size
+    ) {
+
+      const id =
+        patternId(
+          sequence
+        );
+
+
+      const isTried =
+        triedPatterns.has(
+          id
+        );
+
+
+      /* =======================================================
+         CARD
+      ======================================================== */
+
+      roundedRect(
+        ctx,
+        x,
+        y,
+        size,
+        size,
+        14
+      );
+
+
+      ctx.fillStyle =
+        "#1e293b";
+
+      ctx.fill();
+
+
+      ctx.strokeStyle =
+        "#334155";
+
+      ctx.lineWidth =
+        1;
+
+      ctx.stroke();
+
+
+      /* =======================================================
+         NUMBER
+      ======================================================== */
+
+      ctx.font =
+        "700 13px Inter, sans-serif";
+
+      ctx.fillStyle =
+        "#22c55e";
+
+      ctx.textAlign =
+        "left";
+
+      ctx.textBaseline =
+        "top";
+
+
+      ctx.fillText(
+        String(
+          index + 1
+        ),
+        x + 10,
+        y + 9
+      );
+
+
+      /* =======================================================
+         POINTS
+      ======================================================== */
+
+      const points =
+        getPreviewPoints(
+          x,
+          y,
+          size
+        );
+
+
+      /* =======================================================
+         CONNECTING LINE
+      ======================================================== */
+
+      if (
+        sequence.length > 1
+      ) {
+
+        ctx.beginPath();
+
+
+        for (
+          let i = 0;
+          i < sequence.length;
+          i++
+        ) {
+
+          const point =
+            points[
+              sequence[i]
+            ];
+
+
+          if (
+            i === 0
+          ) {
+
+            ctx.moveTo(
+              point[0],
+              point[1]
+            );
+
+          } else {
+
+            ctx.lineTo(
+              point[0],
+              point[1]
+            );
+          }
+        }
+
+
+        ctx.strokeStyle =
+          "#0ea5e9";
+
+        ctx.lineWidth =
+          Math.max(
+            2,
+            size * 0.025
+          );
+
+        ctx.lineCap =
+          "round";
+
+        ctx.lineJoin =
+          "round";
+
+        ctx.stroke();
+      }
+
+
+      /* =======================================================
+         BASE DOTS
+      ======================================================== */
+
+      for (
+        let i = 0;
+        i < points.length;
+        i++
+      ) {
+
+        const point =
+          points[i];
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+          point[0],
+          point[1],
+          Math.max(
+            4,
+            size * 0.034
+          ),
+          0,
+          Math.PI * 2
+        );
+
+
+        ctx.fillStyle =
+          "#475569";
+
+        ctx.fill();
+      }
+
+
+      /* =======================================================
+         SELECTED DOTS
+      ======================================================== */
+
+      for (
+        let i = 0;
+        i < sequence.length;
+        i++
+      ) {
+
+        const point =
+          points[
+            sequence[i]
+          ];
+
+
+        ctx.beginPath();
+
+
+        if (
+          i === 0
+        ) {
+
+          ctx.fillStyle =
+            "#ef4444";
+
+          ctx.arc(
+            point[0],
+            point[1],
+            Math.max(
+              6,
+              size * 0.052
+            ),
+            0,
+            Math.PI * 2
+          );
+
+        } else {
+
+          ctx.fillStyle =
+            "#38bdf8";
+
+          ctx.arc(
+            point[0],
+            point[1],
+            Math.max(
+              5,
+              size * 0.045
+            ),
+            0,
+            Math.PI * 2
+          );
+        }
+
+
+        ctx.fill();
+      }
+
+
+      /* =======================================================
+         CHECK CIRCLE
+      ======================================================== */
+
+      const circleX =
+        x +
+        size / 2;
+
+
+      const circleY =
+        y +
+        size +
+        PREVIEW_VERTICAL_GAP / 2;
+
+
+      const circleRadius =
+        Math.max(
+          11,
+          Math.min(
+            15,
+            size * 0.075
+          )
+        );
+
+
+      ctx.beginPath();
+
+      ctx.arc(
+        circleX,
+        circleY,
+        circleRadius,
+        0,
+        Math.PI * 2
+      );
+
+
+      ctx.fillStyle =
+        isTried
+          ? "#22c55e"
+          : "#ffffff";
+
+      ctx.fill();
+
+
+      ctx.strokeStyle =
+        isTried
+          ? "#16a34a"
+          : "#94a3b8";
+
+      ctx.lineWidth =
+        1.5;
+
+      ctx.stroke();
+
+
+      /* =======================================================
+         CHECK MARK
+      ======================================================== */
+
+      if (
+        isTried
+      ) {
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+          circleX -
+            circleRadius * 0.45,
+          circleY
+        );
+
+
+        ctx.lineTo(
+          circleX -
+            circleRadius * 0.10,
+          circleY +
+            circleRadius * 0.35
+        );
+
+
+        ctx.lineTo(
+          circleX +
+            circleRadius * 0.50,
+          circleY -
+            circleRadius * 0.40
+        );
+
+
+        ctx.strokeStyle =
+          "#ffffff";
+
+        ctx.lineWidth =
+          Math.max(
+            1.7,
+            circleRadius * 0.18
+          );
+
+        ctx.lineCap =
+          "round";
+
+        ctx.lineJoin =
+          "round";
+
+        ctx.stroke();
+      }
+
+
+      /* =======================================================
+         TRIED LABEL
+      ======================================================== */
+
+      if (
+        isTried
+      ) {
+
+        ctx.font =
+          "600 10px Inter, sans-serif";
+
+        ctx.fillStyle =
+          "#4ade80";
+
+        ctx.textAlign =
+          "center";
+
+        ctx.textBaseline =
+          "top";
+
+
+        ctx.fillText(
+          "Tried",
+          circleX,
+          circleY +
+            circleRadius +
+            5
+        );
+      }
+    }
+
+
+    /* =========================================================
+       DRAW PREVIEW
+    ========================================================== */
+
+    function drawPreview() {
+
+      drawFrame =
+        null;
+
+
+      if (
+        !previewLayout ||
+        !generatedSequences.length
+      ) {
+        return;
+      }
+
+
+      const width =
+        previewWrapper.clientWidth;
+
+
+      const height =
+        previewWrapper.clientHeight;
+
+
+      if (
+        width <= 0 ||
+        height <= 0
+      ) {
+        return;
+      }
+
+
+      const scrollTop =
+        previewWrapper.scrollTop;
+
+
+      /*
+        Move viewport-sized canvas
+        with the scroll position.
+      */
+
+      canvas.style.transform =
+        `translate3d(0, ${scrollTop}px, 0)`;
+
+
+      /* Clear canvas */
+
+      ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+      );
+
+
+      /* Background */
+
+      ctx.fillStyle =
+        "#0b1220";
+
+      ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+      );
+
+
+      const layout =
+        previewLayout;
+
+
+      /*
+        Visible rows + buffer.
+      */
+
+      const firstVisibleRow =
+        Math.max(
+          0,
+          Math.floor(
+            (
+              scrollTop -
+              layout.padding
+            ) /
+            layout.rowHeight
+          ) - 2
+        );
+
+
+      const lastVisibleRow =
+        Math.min(
+          Math.ceil(
+            generatedSequences.length /
+            layout.columns
+          ),
+          Math.ceil(
+            (
+              scrollTop +
+              height -
+              layout.padding
+            ) /
+            layout.rowHeight
+          ) + 2
+        );
+
+
+      for (
+        let row =
+          firstVisibleRow;
+
+        row <
+          lastVisibleRow;
+
+        row++
+      ) {
+
+        for (
+          let column = 0;
+
+          column <
+            layout.columns;
+
+          column++
+        ) {
+
+          const index =
+            row *
+              layout.columns +
+            column;
+
+
+          if (
+            index >=
+            generatedSequences.length
+          ) {
+            break;
+          }
+
+
+          const absoluteX =
+            layout.padding +
+            column *
+              (
+                layout.cardSize +
+                layout.gap
+              );
+
+
+          const absoluteY =
+            layout.padding +
+            row *
+              layout.rowHeight;
+
+
+          const drawY =
+            absoluteY -
+            scrollTop;
+
+
+          drawPattern(
+            generatedSequences[index],
+            index,
+            absoluteX,
+            drawY,
+            layout.cardSize
+          );
+        }
+      }
+    }
+
+
+    function requestPreviewDraw() {
+
+      if (
+        drawFrame !== null
+      ) {
+
+        cancelAnimationFrame(
+          drawFrame
+        );
+      }
+
+
+      drawFrame =
+        requestAnimationFrame(
+          drawPreview
+        );
+    }
+
+
+    /* =========================================================
+       CANVAS CLICK / TAP
+    ========================================================== */
+
+    function handleCanvasClick(
+      event
+    ) {
+
+      if (
+        !previewLayout ||
+        !generatedSequences.length
+      ) {
+        return;
+      }
+
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+
+      const canvasX =
+        event.clientX -
+        rect.left;
+
+
+      const canvasY =
+        event.clientY -
+        rect.top;
+
+
+      const documentY =
+        canvasY +
+        previewWrapper.scrollTop;
+
+
+      const layout =
+        previewLayout;
+
+
+      const row =
+        Math.floor(
+          (
+            documentY -
+            layout.padding
+          ) /
+          layout.rowHeight
+        );
+
+
+      const column =
+        Math.floor(
+          (
+            canvasX -
+            layout.padding
+          ) /
+          (
+            layout.cardSize +
+            layout.gap
+          )
+        );
+
+
+      if (
+        row < 0 ||
+        column < 0 ||
+        column >=
+          layout.columns
+      ) {
+        return;
+      }
+
+
+      const index =
+        row *
+          layout.columns +
+        column;
+
+
+      if (
+        index < 0 ||
+        index >=
+          generatedSequences.length
+      ) {
+        return;
+      }
+
+
+      const cardX =
+        layout.padding +
+        column *
+          (
+            layout.cardSize +
+            layout.gap
+          );
+
+
+      const cardY =
+        layout.padding +
+        row *
+          layout.rowHeight;
+
+
+      const circleX =
+        cardX +
+        layout.cardSize / 2;
+
+
+      const circleY =
+        cardY +
+        layout.cardSize +
+        PREVIEW_VERTICAL_GAP / 2;
+
+
+      const circleRadius =
+        Math.max(
+          11,
+          Math.min(
+            15,
+            layout.cardSize * 0.075
+          )
+        );
+
+
+      const dx =
+        canvasX -
+        circleX;
+
+
+      const dy =
+        documentY -
+        circleY;
+
+
+      const distance =
+        Math.sqrt(
+          dx * dx +
+          dy * dy
+        );
+
+
+      /*
+        Larger touch target for mobile.
+      */
+
+      if (
+        distance <=
+        circleRadius + 10
+      ) {
+
+        toggleTried(
+          generatedSequences[
+            index
+          ]
+        );
+      }
+    }
+
+
+    /* =========================================================
+       GENERATE
+    ========================================================== */
+
+    function generate() {
+
+      generateBtn.disabled =
+        true;
+
+      downloadPdfBtn.disabled =
+        true;
+
+
+      statusText.textContent =
+        `Generating ${selectedLength}-dot patterns...`;
+
+
+      statusSubtext.textContent =
+        "Generating all valid patterns. Please wait...";
+
+
+      generationCount.textContent =
+        "Generating...";
+
+
+      setTimeout(
+        () => {
+
+          const start =
+            performance.now();
+
+
+          try {
+
+            generatedSequences =
+              generatePatterns(
+                selectedLength
+              );
+
+
+            const elapsed =
+              (
+                performance.now() -
+                start
+              ) /
+              1000;
+
+
+            const count =
+              generatedSequences.length;
+
+
+            statusText.textContent =
+              `${count.toLocaleString()} valid ${selectedLength}-dot patterns generated.`;
+
+
+            statusSubtext.textContent =
+              "All generated patterns are available below. Tap the white circle under any pattern to mark it Tried.";
+
+
+            generationCount.textContent =
+              `${count.toLocaleString()} patterns`;
+
+
+            generatedStat.textContent =
+              count.toLocaleString();
+
+
+            emptyState.classList.add(
+              "hidden"
+            );
+
+
+            previewWrapper.classList.remove(
+              "hidden"
+            );
+
+
+            downloadPdfBtn.disabled =
+              count === 0;
+
+
+            showHistoryMessage(
+              `Generation completed in ${elapsed.toFixed(2)} seconds. Tried history is retained automatically.`
+            );
+
+
+            previewWrapper.scrollTop =
+              0;
+
+
+            requestAnimationFrame(
+              () => {
+
+                calculatePreviewLayout();
+
+                updateHistoryStats();
+
+                requestPreviewDraw();
+
+              }
+            );
+
+
+          } catch (
+            error
+          ) {
+
+            console.error(
+              error
+            );
+
+
+            statusText.textContent =
+              "Pattern generation failed.";
+
+
+            statusSubtext.textContent =
+              error.message ||
+              "An unexpected error occurred.";
+
+          } finally {
+
+            generateBtn.disabled =
+              false;
+          }
+
+        },
+        50
+      );
+    }
+
+
+    /* =========================================================
+       CLEAR HISTORY
+    ========================================================== */
+
+    function clearHistory() {
+
+      if (
+        triedPatterns.size === 0
+      ) {
+
+        alert(
+          "There are no Tried patterns in history."
+        );
+
+        return;
+      }
+
+
+      const confirmed =
+        confirm(
+          `Clear all ${triedPatterns.size.toLocaleString()} Tried patterns from browser history?`
+        );
+
+
+      if (
+        !confirmed
+      ) {
+        return;
+      }
+
+
+      triedPatterns.clear();
+
+      saveHistory();
+
+      updateHistoryStats();
+
+      showHistoryMessage(
+        "Tried pattern history has been cleared."
+      );
+
+      requestPreviewDraw();
+    }
+
+
+    /* =========================================================
+       EXPORT JSON
+    ========================================================== */
+
+    function exportHistory() {
+
+      const data = {
+
+        version: 2,
+
+        type:
+          "android-pattern-tried-history",
+
+        exportedAt:
+          new Date().toISOString(),
+
+        triedPatterns:
+          Array.from(
+            triedPatterns
+          )
+
+      };
+
+
+      const json =
+        JSON.stringify(
+          data,
+          null,
+          2
+        );
+
+
+      const blob =
+        new Blob(
+          [json],
+          {
+            type:
+              "application/json"
+          }
+        );
+
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+
+      link.href =
+        url;
+
+
+      link.download =
+        `android-pattern-history-${new Date()
+          .toISOString()
+          .slice(0, 10)}.json`;
+
+
+      document.body.appendChild(
+        link
+      );
+
+
+      link.click();
+
+      link.remove();
+
+
+      URL.revokeObjectURL(
+        url
+      );
+
+
+      showHistoryMessage(
+        `${triedPatterns.size.toLocaleString()} Tried patterns exported successfully.`
+      );
+    }
+
+
+    /* =========================================================
+       IMPORT JSON
+    ========================================================== */
+
+    function importHistory() {
+
+      jsonFileInput.value =
+        "";
+
+      jsonFileInput.click();
+    }
+
+
+    jsonFileInput.addEventListener(
+      "change",
+      async event => {
+
+        const file =
+          event.target.files &&
+          event.target.files[0];
+
+
+        if (
+          !file
+        ) {
+          return;
+        }
+
+
+        try {
+
+          const text =
+            await file.text();
+
+
+          const data =
+            JSON.parse(
+              text
+            );
+
+
+          let imported = [];
+
+
+          if (
+            data &&
+            Array.isArray(
+              data.triedPatterns
+            )
+          ) {
+
+            imported =
+              data.triedPatterns;
+
+          } else if (
+            Array.isArray(
+              data
+            )
+          ) {
+
+            imported =
+              data;
+
+          } else {
+
+            throw new Error(
+              "Invalid JSON history format."
+            );
+          }
+
+
+          const valid =
+            imported.filter(
+              value =>
+                typeof value ===
+                "string" &&
+                /^\d(?:-\d){3,8}$/.test(
+                  value
+                )
+            );
+
+
+          const before =
+            triedPatterns.size;
+
+
+          for (
+            const id of valid
+          ) {
+
+            triedPatterns.add(
+              id
+            );
+          }
+
+
+          saveHistory();
+
+          updateHistoryStats();
+
+          requestPreviewDraw();
+
+
+          const added =
+            triedPatterns.size -
+            before;
+
+
+          showHistoryMessage(
+            `${valid.length.toLocaleString()} history entries imported. ${added.toLocaleString()} new Tried patterns added.`
+          );
+
+
+        } catch (
+          error
+        ) {
+
+          console.error(
+            error
+          );
+
+
+          alert(
+            `Could not import history.\n\n${error.message}`
+          );
+        }
+      }
+    );
+
+
+    /* =========================================================
+       PDF PAGE BACKGROUND
+    ========================================================== */
+
+    function paintPdfPage(
+      doc
+    ) {
+
+      doc.setFillColor(
+        15,
+        23,
+        42
+      );
+
+
+      doc.rect(
+        0,
+        0,
+        PAGE_WIDTH,
+        PAGE_HEIGHT,
+        "F"
+      );
+    }
+
+
+    /* =========================================================
+       PDF PATTERN
+    ========================================================== */
+
+    function drawPdfPattern(
+      doc,
+      sequence,
+      x,
+      y,
+      index
+    ) {
+
+      doc.setFillColor(
+        30,
+        41,
+        59
+      );
+
+
+      doc.roundedRect(
+        x,
+        y,
+        CARD_SIZE,
+        CARD_SIZE,
+        3,
+        3,
+        "F"
+      );
+
+
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+
+      doc.setFontSize(
+        5.5
+      );
+
+
+      doc.setTextColor(
+        34,
+        197,
+        94
+      );
+
+
+      doc.text(
+        String(
+          index + 1
+        ),
+        x + 2.5,
+        y + 4.5
+      );
+
+
+      const spacing =
+        9.5;
+
+
+      const offset =
+        (
+          CARD_SIZE -
+          spacing * 2
+        ) /
+        2;
+
+
+      const points =
+        Array.from(
+          {
+            length: 9
+          },
+          (_, i) => {
+
+            const row =
+              Math.floor(
+                i / 3
+              );
+
+
+            const col =
+              i % 3;
+
+
+            return [
+
+              x +
+                offset +
+                col * spacing,
+
+              y +
+                offset +
+                row * spacing
+
+            ];
+          }
+        );
+
+
+      if (
+        sequence.length > 1
+      ) {
+
+        doc.setDrawColor(
+          14,
+          165,
+          233
+        );
+
+
+        doc.setLineWidth(
+          0.9
+        );
+
+
+        for (
+          let i = 1;
+          i < sequence.length;
+          i++
+        ) {
+
+          const from =
+            points[
+              sequence[i - 1]
+            ];
+
+
+          const to =
+            points[
+              sequence[i]
+            ];
+
+
+          doc.line(
+            from[0],
+            from[1],
+            to[0],
+            to[1]
+          );
+        }
+      }
+
+
+      for (
+        const point of points
+      ) {
+
+        doc.setFillColor(
+          71,
+          85,
+          105
+        );
+
+
+        doc.circle(
+          point[0],
+          point[1],
+          1.15,
+          "F"
+        );
+      }
+
+
+      for (
+        let i = 0;
+        i < sequence.length;
+        i++
+      ) {
+
+        const point =
+          points[
+            sequence[i]
+          ];
+
+
+        if (
+          i === 0
+        ) {
+
+          doc.setFillColor(
+            239,
+            68,
+            68
+          );
+
+
+          doc.circle(
+            point[0],
+            point[1],
+            1.9,
+            "F"
+          );
+
+        } else {
+
+          doc.setFillColor(
+            56,
+            189,
+            248
+          );
+
+
+          doc.circle(
+            point[0],
+            point[1],
+            1.55,
+            "F"
+          );
+        }
+      }
+    }
+
+
+    /* =========================================================
+       PDF CHECK CIRCLE
+    ========================================================== */
+
+    function drawPdfCheckCircle(
+      doc,
+      x,
+      y
+    ) {
+
+      const centerX =
+        x +
+        CARD_SIZE / 2;
+
+
+      const centerY =
+        y +
+        CARD_SIZE +
+        VERTICAL_GAP / 2;
+
+
+      doc.setFillColor(
+        255,
+        255,
+        255
+      );
+
+
+      doc.setDrawColor(
+        148,
+        163,
+        184
+      );
+
+
+      doc.setLineWidth(
+        0.45
+      );
+
+
+      doc.circle(
+        centerX,
+        centerY,
+        3.5,
+        "FD"
+      );
+    }
+
+
+    /* =========================================================
+       DOWNLOAD PDF
+    ========================================================== */
+
+    async function downloadPDF() {
+
+      if (
+        !generatedSequences.length
+      ) {
+        return;
+      }
+
+
+      const {
+        jsPDF
+      } = window.jspdf;
+
+
+      progressOverlay.classList.add(
+        "show"
+      );
+
+
+      try {
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              50
+            )
+        );
+
+
+        const doc =
+          new jsPDF({
+
+            orientation:
+              "portrait",
+
+            unit:
+              "mm",
+
+            format:
+              "a4",
+
+            compress:
+              true
+
+          });
+
+
+        paintPdfPage(
+          doc
+        );
+
+
+        const total =
+          generatedSequences.length;
+
+
+        for (
+          let i = 0;
+          i < total;
+          i++
+        ) {
+
+          if (
+            i > 0 &&
+            i % ITEMS_PER_PAGE === 0
+          ) {
+
+            doc.addPage(
+              "a4",
+              "portrait"
+            );
+
+
+            paintPdfPage(
+              doc
+            );
+          }
+
+
+          const pageIndex =
+            i %
+            ITEMS_PER_PAGE;
+
+
+          const row =
+            Math.floor(
+              pageIndex /
+              COLUMNS
+            );
+
+
+          const column =
+            pageIndex %
+            COLUMNS;
+
+
+          const x =
+            LEFT_MARGIN +
+            column *
+              (
+                CARD_SIZE +
+                HORIZONTAL_GAP
+              );
+
+
+          const y =
+            TOP_MARGIN +
+            row *
+              (
+                CARD_SIZE +
+                VERTICAL_GAP
+              );
+
+
+          drawPdfPattern(
+            doc,
+            generatedSequences[i],
+            x,
+            y,
+            i
+          );
+
+
+          drawPdfCheckCircle(
+            doc,
+            x,
+            y
+          );
+
+
+          if (
+            i % 100 === 0 ||
+            i === total - 1
+          ) {
+
+            const percent =
+              (
+                (i + 1) /
+                total
+              ) *
+              100;
+
+
+            pdfProgressBar.style.width =
+              `${percent}%`;
+
+
+            pdfProgressText.textContent =
+              `Creating pattern ${(i + 1).toLocaleString()} of ${total.toLocaleString()} (${percent.toFixed(1)}%)`;
+
+
+            if (
+              i % 1000 === 0
+            ) {
+
+              await new Promise(
+                resolve =>
+                  setTimeout(
+                    resolve,
+                    0
+                  )
+              );
+            }
+          }
+        }
+
+
+        pdfProgressText.textContent =
+          "Saving PDF...";
+
+
+        pdfProgressBar.style.width =
+          "100%";
+
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              100
+            )
+        );
+
+
+        doc.save(
+          `A4-Pattern-Layout-${selectedLength}Dots-Circle.pdf`
+        );
+
+
+      } catch (
+        error
+      ) {
+
+        console.error(
+          error
+        );
+
+
+        alert(
+          `PDF generation failed.\n\n${error.message}`
+        );
+
+      } finally {
+
+        progressOverlay.classList.remove(
+          "show"
+        );
+
+
+        pdfProgressBar.style.width =
+          "0%";
+
+
+        pdfProgressText.textContent =
+          "Preparing...";
+      }
+    }
+
+
+    /* =========================================================
+       SCROLL
+    ========================================================== */
+
+    previewWrapper.addEventListener(
+      "scroll",
+      () => {
+
+        requestPreviewDraw();
+
+      },
+      {
+        passive: true
+      }
+    );
+
+
+    /* =========================================================
+       CANVAS CLICK
+    ========================================================== */
+
+    canvas.addEventListener(
+      "click",
+      handleCanvasClick
+    );
+
+
+    /* =========================================================
+       RESIZE
+    ========================================================== */
+
+    window.addEventListener(
+      "resize",
+      () => {
+
+        clearTimeout(
+          resizeTimer
+        );
+
+
+        resizeTimer =
+          setTimeout(
+            () => {
+
+              if (
+                generatedSequences.length
+              ) {
+
+                calculatePreviewLayout();
+
+              }
+
+            },
+            150
+          );
+      }
+    );
+
+
+    /* =========================================================
+       BUTTON EVENTS
+    ========================================================== */
+
+    generateBtn.addEventListener(
+      "click",
+      generate
+    );
+
+
+    downloadPdfBtn.addEventListener(
+      "click",
+      downloadPDF
+    );
+
+
+    clearHistoryBtn.addEventListener(
+      "click",
+      clearHistory
+    );
+
+
+    exportHistoryBtn.addEventListener(
+      "click",
+      exportHistory
+    );
+
+
+    importHistoryBtn.addEventListener(
+      "click",
+      importHistory
+    );
+
+
+    /* =========================================================
+       INITIALIZATION
+    ========================================================== */
+
+    buildDotSelector();
+
+    updateHistoryStats();
+
+
+    if (
+      triedPatterns.size
+    ) {
+
+      showHistoryMessage(
+        `${triedPatterns.size.toLocaleString()} Tried pattern(s) are saved in this browser.`
+      );
+    }
+
+  </script>
+
+</body>
+</html>
